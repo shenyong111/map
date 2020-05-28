@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>小区容积率</title>
+    <!-- <link rel="stylesheet" href="https://js.arcgis.com/4.9/esri/css/main.css">
+    <script src="https://js.arcgis.com/4.9/"></script> -->
+    <link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/css/main.css">
+    <script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+    <!-- <link rel="stylesheet" href="http://tax.cindata.cn/arcgis_js47_api/library/4.7/esri/css/main.css">
+  <script src="http://tax.cindata.cn/arcgis_js47_api/library/4.7/dojo/dojo.js"></script> -->
+    <script>
+        var dojoConfig = {
+            has: {
+                "esri-featurelayer-webgl": 1
+            }
+        };
+    </script>
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #containerDiv {
+            background-color: white;
+            padding: 3px;
+            text-align: center;
+        }
+
+        #title {
+            font-size: 14pt;
+        }
+
+        .esri-ui-corner .esri-expand .esri-widget--panel,
+        .esri-ui-corner .esri-expand .esri-widget--panel-height-only,
+        .esri-ui-corner .esri-component.esri-widget--panel {
+            width: 150px;
+        }
+    </style>
+    <script>
+        require([
+            "esri/config",
+            "esri/Map",
+            "esri/views/SceneView",
+            "esri/layers/TileLayer",
+            "esri/Basemap",
+            "esri/layers/MapImageLayer",
+            "esri/layers/WMTSLayer",
+            "esri/layers/WebTileLayer",
+            "esri/layers/FeatureLayer",
+            "esri/tasks/support/Query",
+            "esri/widgets/Legend",
+            "esri/renderers/smartMapping/creators/color",
+            "esri/renderers/smartMapping/statistics/histogram",
+            "esri/widgets/ColorSlider",
+            "esri/core/lang",
+            "dojo/domReady!"
+        ], function (esriConfig,
+            Map, SceneView, TileLayer, Basemap, MapImageLayer, WMTSLayer, WebTileLayer, FeatureLayer, Query, Legend, colorRendererCreator, histogram,
+            ColorSlider, lang
+        ) {
+                var renderer = {
+                    type: "simple", // autocasts as new SimpleRenderer()
+                    symbol: {
+                        type: "point-3d",
+                        symbolLayers: [{
+                            type: "icon",
+                            anchor: "center",
+                            outline: {
+                                color: 'gray',
+                                size: 0.5
+                            },
+                            resource: {
+                                primitive: "kite"
+                            },
+                            size: 10,
+                            material: {
+                                color: [255, 255, 0, 1]
+                            }
+                        }],
+                        verticalOffset: {
+                            screenLength: 40,
+                            maxWorldLength: 200,
+                            minWorldLength: 35
+                        },
+                        callout: {
+                            type: "line",
+                            size: 1,
+                            color: [150, 150, 150],
+                            border: {
+                                color: [50, 50, 50]
+                            }
+                        }
+                    },
+                    visualVariables: [{
+                        type: "size",
+                        field: "plotratio",
+                        legendOptions: {
+                            title: "容积率"
+                        },
+                        minDataValue: 0.1,  // features where < 10% of the pop in poverty
+                        maxDataValue: 10,  // features where > 30% of the pop in poverty
+                        minSize: 10,  // size of marker in pts
+                        maxSize: 40  // size of marker in pts
+                        // stops: [{
+                        //     value: 2,
+                        //     size: 10,
+                        //     label: "<2"
+                        // },
+                        // {
+                        //     value: 3,
+                        //     size: 15,
+                        //     label: "<3"
+                        // },
+                        // {
+                        //     value: 4,
+                        //     size: 20,
+                        //     label: "<4"
+                        // },
+                        // {
+                        //     value: 5,
+                        //     size: 25,
+                        //     label: ">5"
+                        // }
+                        // ]
+                    }, {
+                        type: "color",
+                        field: "plotratio",
+                        legendOptions: {
+                            title: "容积率"
+                        },
+                        stops: [{
+                            value: 1,
+                            color: [0, 255, 0],
+                            label: "<1"
+                        },
+                        {
+                            value: 2,
+                            color: [139, 209, 0],
+                            label: "2"
+                        },
+                        {
+                            value: 3,
+                            color: [255, 255, 0],
+                            label: "3"
+                        },
+                        {
+                            value: 6,
+                            color: [255, 0, 0],
+                            label: ">6"
+                        }
+                        ]
+                    }]
+                };
+
+                var buildingsLayer = new FeatureLayer({
+                    // url: "http://ypgis.cindata.cn/arcgis/rest/services/bj_xiaoqu_point/MapServer/0",
+                    url: "http://111.40.214.181/arcgis/rest/services/special_map/bj_xiaoqu_point/MapServer/0",
+                    title: "小区容积率",
+                    renderer: renderer,
+                    opacity: 0.8,
+                    popupTemplate: { // autocasts as new PopupTemplate()
+                        title: "{label}",
+                        content: [{
+                            type: "fields",
+                            fieldInfos: [{
+                                fieldName: "label",
+                                label: "小区名称"
+                            }, {
+                                fieldName: "plotratio",
+                                label: "容积率"
+                            }]
+                        }]
+                    },
+                    outFields: ["label", "plotratio"],
+                    // definitionExpression: "AVG_PRICE >= 0",
+                    labelingInfo: [{
+                        // When using callouts on labels, "above-center" is the only allowed position
+                        labelPlacement: "center-center",
+                        labelExpressionInfo: {
+                            value: "{plotratio}"
+                        },
+                        symbol: {
+                            type: "label-3d", // autocasts as new LabelSymbol3D()
+                            symbolLayers: [{
+                                type: "text", // autocasts as new TextSymbol3DLayer()
+                                material: {
+                                    color: "black"
+                                },
+                                halo: {
+                                    color: [255, 255, 255, 0.7],
+                                    size: 1
+                                },
+                                // verticalAlignment: "middle",
+                                size: 8
+                            }]
+                            // Labels need a small vertical offset that will be used by the callout
+                            // verticalOffset: {
+                            //     screenLength: 150,
+                            //     maxWorldLength: 2000,
+                            //     minWorldLength: 30
+                            // },
+                            // The callout has to have a defined type (currently only line is possible)
+                            // The size, the color and the border color can be customized
+                            // callout: {
+                            //     type: "line", // autocasts as new LineCallout3D()
+                            //     size: 0.5,
+                            //     color: [0, 0, 0],
+                            //     border: {
+                            //         color: [255, 255, 255, 0.7]
+                            //     }
+                            // }
+                        }
+                    }],
+                    labelsVisible: true
+                });
+                //GXD底图
+                var baseLayer = new MapImageLayer({
+                    url: "http://tilesvc.cindata.cn/arcgis/rest/services/comm/ChinaGray/MapServer",
+                    legendEnabled: false,
+                    imageFormat: "png"
+                });
+
+                esriConfig.request.corsEnabledServers.push("a.tile.stamen.com",
+                    "b.tile.stamen.com", "c.tile.stamen.com", "d.tile.stamen.com");
+
+                // Create a WebTileLayer with a third-party cached service
+                var mapBaseLayer = new WebTileLayer({
+                    urlTemplate: "http://{subDomain}.tile.stamen.com/terrain/{level}/{col}/{row}.png",
+                    subDomains: ["a", "b", "c", "d"],
+                    copyright: "Tianditu"
+                });
+
+                // Create a Basemap with the WebTileLayer. The thumbnailUrl will be used for
+                // the image in the BasemapToggle widget.
+                var stamen = new Basemap({
+                    baseLayers: [baseLayer],
+                    title: "Terrain",
+                    id: "terrain",
+                    thumbnailUrl: "https://stamen-tiles.a.ssl.fastly.net/terrain/10/177/409.png"
+                });
+
+                var map = new Map({
+                    // basemap: "streets",
+                    basemap: stamen,
+                    //ground: "world-elevation",
+                    layers: [buildingsLayer]
+                    // layers: [baseLayer, buildingsLayer]
+                });
+
+                var view = new SceneView({
+                    container: "viewDiv",
+                    map: map,
+                    camera: {
+                        position: {
+                            x: 12956674.938403904,
+                            y: 4842610.4225329105,
+                            z: 8371.976732002571,
+                            // x: 12956982.625615954,
+                            // y: 4823116.15489901,
+                            // z: 8372.017406575382,
+                            spatialReference: {
+                                wkid: 3857
+                            }
+                        },
+                        fov: 60,
+                        heading: 0,
+                        tilt: 45
+                        // position: {
+                        //     x: 11573214.988076428,
+                        //     y: 4376031.988738592,
+                        //     z: 25512548,
+                        //     spatialReference: {
+                        //         wkid: 3857
+                        //     }
+                        // },
+                        // fov: 60,
+                        // heading: 354.4803992681322,
+                        // tilt: 0.20491991758809353
+                    }
+                });
+
+                var legend = new Legend({
+                    view: view
+                });
+                view.ui.add(legend, "bottom-right");
+                view.ui.remove(["attribution", "navigation-toggle", "compass", "zoom"]);
+
+                // view.on("double-click", function (e) {
+                //     console.log(view.camera);
+                // });
+                var handle = view.watch("camera", function (newValue, oldValue, propertyName, target) {
+                    // console.log(propertyName + " changed from " + oldValue + " to " + newValue);
+                    console.log(newValue);
+                });
+
+                view.on("key-down", function (evt) {
+                    console.log("key-down", evt);
+                    if (evt.key === ' ') {
+                        view.goTo({
+                            tilt: 0,
+                            heading: 0
+                        });
+                    }
+                });
+
+                view.when(function () {
+                    // view.goTo({
+                    //     position: {
+                    //         x: 12956982.625615954,
+                    //         y: 4823116.15489901,
+                    //         z: 23284.146941054612,
+                    //         spatialReference: {
+                    //             wkid: 3857
+                    //         }
+                    //     },
+                    //     fov: 60,
+                    //     heading: 0,
+                    //     tilt: 45
+                    // }, {
+                    //         speedFactor: 0.5
+                    //     })
+                    // .then(function () {
+                    //     map.add(buildingsLayer);
+                    // })
+                });
+
+                // Listen to layerview create event for the layers
+                view.on("layerview-create", function (event) {
+                    if (event.layer.title == "小区容积率") {
+
+                    }
+                });
+
+                // // configure parameters for the color renderer generator
+                // // the layer must be specified along with a field name
+                // // or arcade expression. The basemap and other properties determine
+                // // the appropriate default color scheme.
+
+                // var colorParams = {
+                //     layer: buildingsLayer,
+                //     basemap: map.basemap,
+                //     field: "VolRatio",
+                //     // normalizationField: "TOTPOP_CY",
+                //     symbolType: '3d-flat',
+                //     view: view,
+                //     theme: "above-and-below"
+                // };
+
+                // // Set up initial color slider properties.
+                // // numHandles determines whether 2 or 3 handles
+                // // will be visible in the slider. The primary handle
+                // // (middle one of the three) controls all handles
+                // // when moved if `syncedHandles` is true.
+
+                // var sliderParams = {
+                //     numHandles: 3,
+                //     syncedHandles: true,
+                //     container: "slider"
+                // };
+
+                // // Generate a continuous color renderer based on the
+                // // statistics of the data in the provided layer
+                // // and field normalized by the normalizationField.
+                // //
+                // // This resolves to an object containing several helpful
+                // // properties, including color scheme, statistics,
+                // // the renderer and visual variable
+
+                // colorRendererCreator.createContinuousRenderer(colorParams)
+                //     .then(function (response) {
+
+                //         // set the renderer to the layer and add it to the map
+
+                //         buildingsLayer.renderer = response.renderer;
+                //         map.add(buildingsLayer);
+
+                //         // add the statistics and color visual variable objects
+                //         // to the color slider parameters
+
+                //         sliderParams.statistics = response.statistics;
+                //         sliderParams.visualVariable = response.visualVariable;
+
+                //         // generate a histogram for use in the slider. Input the layer
+                //         // and field or arcade expression to generate it.
+
+                //         return histogram({
+                //             layer: buildingsLayer,
+                //             field: "VolRatio",
+                //             // normalizationField: "TOTPOP_CY"
+                //         });
+
+                //     })
+                //     .then(function (histogram) {
+
+                //         // when it resolves set the histogram in the slider parameters
+                //         sliderParams.histogram = histogram;
+
+                //         // input the slider parameters in the slider's constructor
+                //         // and add it to the view's UI
+
+                //         var colorSlider = new ColorSlider(sliderParams);
+                //         view.ui.add("containerDiv", "bottom-left");
+
+                //         // when the user slides the handle(s), update the renderer
+                //         // with the updated color visual variable object
+
+                //         on(colorSlider, "data-change", function () {
+                //             var renderer = buildingsLayer.renderer.clone();
+                //             renderer.visualVariables = [lang.clone(colorSlider.visualVariable)];
+                //             buildingsLayer.renderer = renderer;
+                //         });
+                //     })
+                //     .catch(function (err) {
+                //         console.log("there was an error: ", err);
+                //     });
+            });
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv"></div>
+    <!-- <div id="containerDiv"><span id="title">小区容积率</span>
+        <div id="slider"></div>
+    </div> -->
+</body>
+
+</html>

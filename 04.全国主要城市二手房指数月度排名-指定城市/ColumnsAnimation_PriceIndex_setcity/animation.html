@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <script src="js/d3.v5.min.js"></script>
+    <script src="js/jquery-2.1.1.js"></script>
+    <title>全国主要城市二手房价格指数-指定城市</title>
+    <link rel="stylesheet" href="js/iview/styles/iview.css" type="text/css">
+    <script type="text/javascript" src="js/vue.min.js"></script>
+    <script type="text/javascript" src="http://unpkg.com/iview/dist/iview.min.js"></script>
+</head>
+<audio  src="data/music.mp3" id="myaudio" controls="controls" loop="false" hidden="true" >
+</audio>
+<input type="button" id="play" onclick="autoPlay()" value="播放"  hidden="true"/>
+<!--<input type="button" onclick="closePlay()" value="关闭" />-->
+<div class="title">全国主要城市二手房价格指数月度排名（不包括港澳台）</div>
+<body style="overflow: hidden">
+        <script src="data/indexData.js"></script>
+        <script src="js/config.js"></script>
+        <link rel="stylesheet" href="css/stylesheet.css">
+        <div id='app'>
+            <div id='left-panel'>
+                <i-button @click="openDrawer" type="primary">指定城市</i-button>
+                <Drawer :title="'已指定城市：'+cityList.length+'个'" placement="left" :closable="true" v-model="isOpen" @on-close="closeDrawer">
+                   <i-select v-model="searchCity"
+                             label-in-value="true"
+                             filterable placeholder="请输入城市名称"
+                             not-found-text="未查询到匹配的城市"
+                             @on-change="changeCity"
+                             style="width:200px">
+                       <option-group v-for="item in citys" :label="item.title">
+                        <i-option v-for="city in item.children"
+                                  :value="city.title"
+                                  :label="city.title"
+                                  :key="city.cityId">{{ city.title }}</i-option>
+                       </option-group>
+                    </i-select>
+                    <div style="margin-top: 10px">
+                        <span style="font-weight:600;color:#333333;">主城市：</span>
+                        <span style="color:#2D8CF0;">{{mainCity?mainCity:'未指定'}}</span>
+                    </div>
+                    <template>
+                        <Tree :data="citys"
+                              :render="renderContent"
+                              ref="tree"
+                              show-checkbox
+                              multiple
+                              @on-check-change="check"></Tree>
+                    </template>
+                </Drawer>
+            </div>
+        </div>
+</body>
+<style>
+    #left-panel{
+        position: absolute;
+        left: 10px;
+    }
+    .ivu-drawer-body{
+        overflow-x: hidden;
+    }
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            isOpen: false,
+            searchCity:'',//搜索的城市
+            mainCity: '',//主城市
+            mainCityId: '',//主城市id
+            cityList:[],//已选择的城市
+            citys:[
+                {
+                    "title":"直辖市及特别行政区","children":[
+                        {"title":"北京市","cityId":2},
+                        {"title":"上海市","cityId":862},
+                        {"title":"重庆市","cityId":2466},
+                        {"title":"天津市","cityId":21},
+                        // {"title":"香港特别行政区","cityId":63980},
+                        // {"title":"澳门特别行政区","cityId":63981},
+                    ]
+                },
+                {"title":"安徽省","children":[{"title":"安庆市","cityId":1180},{"title":"蚌埠市","cityId":1143},{"title":"亳州市","cityId":1238},{"title":"滁州市","cityId":1202},{"title":"池州市","cityId":1244},{"title":"阜阳市","cityId":1212},{"title":"淮北市","cityId":1168},{"title":"合肥市","cityId":1122},{"title":"淮南市","cityId":1152},{"title":"黄山市","cityId":1193},{"title":"六安市","cityId":1229},{"title":"马鞍山市","cityId":1160},{"title":"宿州市","cityId":1222},{"title":"铜陵市","cityId":1174},{"title":"芜湖市","cityId":1133},{"title":"宣城市","cityId":1250}]},{"title":"福建省","children":[{"title":"福州市","cityId":1260},{"title":"龙岩市","cityId":1343},{"title":"宁德市","cityId":1352},{"title":"南平市","cityId":1331},{"title":"莆田市","cityId":1283},{"title":"泉州市","cityId":1304},{"title":"三明市","cityId":1290},{"title":"厦门市","cityId":1275},{"title":"漳州市","cityId":1318}]},{"title":"广东省","children":[{"title":"潮州市","cityId":2277},{"title":"东莞市","cityId":2275},{"title":"佛山市","cityId":2183},{"title":"广州市","cityId":2135},{"title":"河源市","cityId":2251},{"title":"惠州市","cityId":2228},{"title":"江门市","cityId":2190},{"title":"揭阳市","cityId":2282},{"title":"茂名市","cityId":2210},{"title":"梅州市","cityId":2235},{"title":"清远市","cityId":2265},{"title":"韶关市","cityId":2149},{"title":"汕头市","cityId":2174},{"title":"汕尾市","cityId":2245},{"title":"深圳市","cityId":2161},{"title":"云浮市","cityId":2289},{"title":"阳江市","cityId":2259},{"title":"珠海市","cityId":2169},{"title":"湛江市","cityId":2199},{"title":"肇庆市","cityId":2218},{"title":"中山市","cityId":2276}]},{"title":"甘肃省","children":[{"title":"白银市","cityId":3214},{"title":"定西市","cityId":3272},{"title":"甘南藏族自治州","cityId":3301},{"title":"金昌市","cityId":3210},{"title":"酒泉市","cityId":3253},{"title":"嘉峪关市","cityId":3208},{"title":"陇南市","cityId":3281},{"title":"临夏回族自治州","cityId":3292},{"title":"兰州市","cityId":3198},{"title":"平凉市","cityId":3244},{"title":"庆阳市","cityId":3262},{"title":"天水市","cityId":3221},{"title":"武威市","cityId":3230},{"title":"张掖市","cityId":3236}]},{"title":"广西壮族自治区","children":[{"title":"北海市","cityId":2351},{"title":"百色市","cityId":2385},{"title":"崇左市","cityId":2426},{"title":"防城港市","cityId":2357},{"title":"贵港市","cityId":2369},{"title":"桂林市","cityId":2323},{"title":"河池市","cityId":2405},{"title":"贺州市","cityId":2399},{"title":"来宾市","cityId":2418},{"title":"柳州市","cityId":2311},{"title":"南宁市","cityId":2297},{"title":"钦州市","cityId":2363},{"title":"梧州市","cityId":2342},{"title":"玉林市","cityId":2376}]},{"title":"贵州省","children":[{"title":"安顺市","cityId":2763},{"title":"毕节市","cityId":2771},{"title":"贵阳市","cityId":2730},{"title":"六盘水市","cityId":2742},{"title":"黔东南苗族侗族自治州","cityId":2802},{"title":"黔南布依族苗族自治州","cityId":2819},{"title":"黔西南布依族苗族自治州","cityId":2793},{"title":"铜仁市","cityId":2781},{"title":"遵义市","cityId":2747}]},{"title":"湖北省","children":[{"title":"恩施土家族苗族自治州","cityId":1970},{"title":"鄂州市","cityId":1914},{"title":"黄冈市","cityId":1945},{"title":"黄石市","cityId":1870},{"title":"荆门市","cityId":1919},{"title":"荆州市","cityId":1935},{"title":"潜江市","cityId":65449},{"title":"神农架林区","cityId":65451},{"title":"十堰市","cityId":1878},{"title":"随州市","cityId":1965},{"title":"天门市","cityId":65450},{"title":"武汉市","cityId":1855},{"title":"孝感市","cityId":1926},{"title":"咸宁市","cityId":1957},{"title":"仙桃市","cityId":63769},{"title":"襄阳市","cityId":1903},{"title":"宜昌市","cityId":1888}]},{"title":"河北省","children":[{"title":"保定市","cityId":132},{"title":"承德市","cityId":178},{"title":"沧州市","cityId":191},{"title":"邯郸市","cityId":90},{"title":"衡水市","cityId":221},{"title":"廊坊市","cityId":209},{"title":"秦皇岛市","cityId":81},{"title":"石家庄市","cityId":40},{"title":"唐山市","cityId":65},{"title":"邢台市","cityId":111},{"title":"张家口市","cityId":159}]},{"title":"黑龙江省","children":[{"title":"大庆市","cityId":777},{"title":"大兴安岭地区","cityId":857},{"title":"哈尔滨市","cityId":708},{"title":"鹤岗市","cityId":757},{"title":"黑河市","cityId":837},{"title":"佳木斯市","cityId":807},{"title":"鸡西市","cityId":746},{"title":"牡丹江市","cityId":825},{"title":"齐齐哈尔市","cityId":728},{"title":"七台河市","cityId":819},{"title":"绥化市","cityId":845},{"title":"双鸭山市","cityId":767},{"title":"伊春市","cityId":788}]},{"title":"湖南省","children":[{"title":"常德市","cityId":2053},{"title":"长沙市","cityId":1985},{"title":"郴州市","cityId":2078},{"title":"怀化市","cityId":2104},{"title":"衡阳市","cityId":2014},{"title":"娄底市","cityId":2118},{"title":"邵阳市","cityId":2028},{"title":"湘潭市","cityId":2007},{"title":"湘西土家族苗族自治州","cityId":2125},{"title":"益阳市","cityId":2070},{"title":"岳阳市","cityId":2042},{"title":"永州市","cityId":2091},{"title":"张家界市","cityId":2064},{"title":"株洲市","cityId":1996}]},{"title":"海南省","children":[{"title":"白沙黎族自治县","cityId":65460},{"title":"保亭黎族苗族自治县","cityId":65464},{"title":"昌江黎族自治县","cityId":65461},{"title":"澄迈县","cityId":65458},{"title":"定安县","cityId":65456},{"title":"东方市","cityId":65455},{"title":"儋州市","cityId":65466},{"title":"海口市","cityId":2436},{"title":"乐东黎族自治县","cityId":65462},{"title":"临高县","cityId":65459},{"title":"陵水黎族自治县","cityId":65463},{"title":"琼海市","cityId":65453},{"title":"琼中黎族苗族自治县","cityId":65465},{"title":"三沙市","cityId":2444},{"title":"三亚市","cityId":2442},{"title":"屯昌县","cityId":65457},{"title":"文昌市","cityId":65454},{"title":"万宁市","cityId":63768},{"title":"五指山市","cityId":65452}]},{"title":"河南省","children":[{"title":"安阳市","cityId":1715},{"title":"鹤壁市","cityId":1726},{"title":"济源市","cityId":65446},{"title":"焦作市","cityId":1747},{"title":"开封市","cityId":1674},{"title":"漯河市","cityId":1775},{"title":"洛阳市","cityId":1686},{"title":"南阳市","cityId":1790},{"title":"平顶山市","cityId":1703},{"title":"濮阳市","cityId":1759},{"title":"三门峡市","cityId":1782},{"title":"商丘市","cityId":1805},{"title":"许昌市","cityId":1767},{"title":"新乡市","cityId":1733},{"title":"信阳市","cityId":1816},{"title":"周口市","cityId":1828},{"title":"驻马店市","cityId":1840},{"title":"郑州市","cityId":1660}]},{"title":"吉林省","children":[{"title":"白城市","cityId":691},{"title":"白山市","cityId":676},{"title":"长春市","cityId":630},{"title":"吉林市","cityId":642},{"title":"辽源市","cityId":661},{"title":"四平市","cityId":653},{"title":"松原市","cityId":684},{"title":"通化市","cityId":667},{"title":"延边朝鲜族自治州","cityId":698}]},{"title":"江苏省","children":[{"title":"常州市","cityId":917},{"title":"淮安市","cityId":956},{"title":"连云港市","cityId":947},{"title":"南京市","cityId":882},{"title":"南通市","cityId":937},{"title":"宿迁市","cityId":1001},{"title":"苏州市","cityId":926},{"title":"泰州市","cityId":993},{"title":"无锡市","cityId":895},{"title":"徐州市","cityId":905},{"title":"盐城市","cityId":966},{"title":"扬州市","cityId":977},{"title":"镇江市","cityId":985}]},{"title":"江西省","children":[{"title":"抚州市","cityId":1459},{"title":"赣州市","cityId":1412},{"title":"吉安市","cityId":1432},{"title":"景德镇市","cityId":1375},{"title":"九江市","cityId":1388},{"title":"南昌市","cityId":1364},{"title":"萍乡市","cityId":1381},{"title":"上饶市","cityId":1472},{"title":"新余市","cityId":1403},{"title":"宜春市","cityId":1447},{"title":"鹰潭市","cityId":1407}]},{"title":"辽宁省","children":[{"title":"鞍山市","cityId":528},{"title":"本溪市","cityId":546},{"title":"朝阳市","cityId":612},{"title":"丹东市","cityId":554},{"title":"大连市","cityId":516},{"title":"抚顺市","cityId":537},{"title":"阜新市","cityId":579},{"title":"葫芦岛市","cityId":621},{"title":"锦州市","cityId":562},{"title":"辽阳市","cityId":588},{"title":"盘锦市","cityId":597},{"title":"沈阳市","cityId":501},{"title":"铁岭市","cityId":603},{"title":"营口市","cityId":571}]},{"title":"内蒙古自治区","children":[{"title":"阿拉善盟","cityId":496},{"title":"包头市","cityId":388},{"title":"巴彦淖尔市","cityId":454},{"title":"赤峰市","cityId":404},{"title":"鄂尔多斯市","cityId":428},{"title":"呼和浩特市","cityId":377},{"title":"呼伦贝尔市","cityId":438},{"title":"通辽市","cityId":418},{"title":"乌海市","cityId":399},{"title":"乌兰察布市","cityId":463},{"title":"兴安盟","cityId":476},{"title":"锡林郭勒盟","cityId":483}]},{"title":"宁夏回族自治区","children":[{"title":"固原市","cityId":3384},{"title":"石嘴山市","cityId":3372},{"title":"吴忠市","cityId":3377},{"title":"银川市","cityId":3364},{"title":"中卫市","cityId":3391}]},{"title":"青海省","children":[{"title":"果洛藏族自治州","cityId":3343},{"title":"海北藏族自治州","cityId":3327},{"title":"海东市","cityId":3320},{"title":"海南藏族自治州","cityId":3337},{"title":"黄南藏族自治州","cityId":3332},{"title":"海西蒙古族藏族自治州","cityId":3357},{"title":"西宁市","cityId":3311},{"title":"玉树藏族自治州","cityId":3350}]},{"title":"四川省","children":[{"title":"阿坝藏族羌族自治州","cityId":2678},{"title":"巴中市","cityId":2665},{"title":"成都市","cityId":2507},{"title":"德阳市","cityId":2552},{"title":"达州市","cityId":2646},{"title":"广安市","cityId":2638},{"title":"广元市","cityId":2571},{"title":"甘孜藏族自治州","cityId":2692},{"title":"乐山市","cityId":2594},{"title":"凉山彝族自治州","cityId":2711},{"title":"泸州市","cityId":2543},{"title":"眉山市","cityId":2618},{"title":"绵阳市","cityId":2560},{"title":"南充市","cityId":2607},{"title":"内江市","cityId":2587},{"title":"攀枝花市","cityId":2536},{"title":"遂宁市","cityId":2580},{"title":"雅安市","cityId":2655},{"title":"宜宾市","cityId":2626},{"title":"自贡市","cityId":2528},{"title":"资阳市","cityId":2672}]},{"title":"山东省","children":[{"title":"滨州市","cityId":1639},{"title":"东营市","cityId":1529},{"title":"德州市","cityId":1616},{"title":"菏泽市","cityId":1648},{"title":"济南市","cityId":1487},{"title":"济宁市","cityId":1564},{"title":"聊城市","cityId":1629},{"title":"莱芜市","cityId":1598},{"title":"临沂市","cityId":1602},{"title":"青岛市","cityId":1499},{"title":"日照市","cityId":1592},{"title":"泰安市","cityId":1578},{"title":"潍坊市","cityId":1550},{"title":"威海市","cityId":1586},{"title":"烟台市","cityId":1536},{"title":"淄博市","cityId":1511},{"title":"枣庄市","cityId":1521}]},{"title":"陕西省","children":[{"title":"安康市","cityId":3176},{"title":"宝鸡市","cityId":3091},{"title":"汉中市","cityId":3149},{"title":"商洛市","cityId":3188},{"title":"铜川市","cityId":3085},{"title":"渭南市","cityId":3121},{"title":"西安市","cityId":3070},{"title":"咸阳市","cityId":3105},{"title":"延安市","cityId":3134},{"title":"榆林市","cityId":3162}]},{"title":"山西省","children":[{"title":"长治市","cityId":267},{"title":"大同市","cityId":247},{"title":"晋城市","cityId":282},{"title":"晋中市","cityId":298},{"title":"临汾市","cityId":342},{"title":"吕梁市","cityId":361},{"title":"朔州市","cityId":290},{"title":"太原市","cityId":235},{"title":"忻州市","cityId":326},{"title":"运城市","cityId":311},{"title":"阳泉市","cityId":260}]},/*{"title":"台湾省","children":[]},*/{"title":"西藏自治区","children":[{"title":"阿里地区","cityId":3053},{"title":"昌都市","cityId":64000},{"title":"拉萨市","cityId":2987},{"title":"林芝市","cityId":63743},{"title":"那曲地区","cityId":3041},{"title":"日喀则市","cityId":3022},{"title":"山南市","cityId":64012}]},{"title":"新疆维吾尔自治区","children":[{"title":"阿克苏地区","cityId":3444},{"title":"阿拉尔市","cityId":63770},{"title":"阿勒泰地区","cityId":3500},{"title":"博尔塔拉蒙古自治州","cityId":3429},{"title":"巴音郭楞蒙古自治州","cityId":3434},{"title":"昌吉回族自治州","cityId":3421},{"title":"哈密地区","cityId":3417},{"title":"和田地区","cityId":3472},{"title":"克拉玛依市","cityId":3407},{"title":"喀什地区","cityId":3459},{"title":"克孜勒苏柯尔克孜自治州","cityId":3454},{"title":"石河子市","cityId":65425},{"title":"塔城地区","cityId":3492},{"title":"吐鲁番市","cityId":63742},{"title":"图木舒克市","cityId":65447},{"title":"五家渠市","cityId":65448},{"title":"乌鲁木齐市","cityId":3397},{"title":"伊犁哈萨克自治州","cityId":3481}]},{"title":"云南省","children":[{"title":"保山市","cityId":2871},{"title":"楚雄彝族自治州","cityId":2920},{"title":"德宏傣族景颇族自治州","cityId":2971},{"title":"大理白族自治州","cityId":2958},{"title":"迪庆藏族自治州","cityId":2982},{"title":"红河哈尼族彝族自治州","cityId":2931},{"title":"昆明市","cityId":2833},{"title":"临沧市","cityId":2910},{"title":"丽江市","cityId":2891},{"title":"怒江傈僳族自治州","cityId":2977},{"title":"普洱市","cityId":2898},{"title":"曲靖市","cityId":2849},{"title":"文山壮族苗族自治州","cityId":2945},{"title":"西双版纳傣族自治州","cityId":2954},{"title":"玉溪市","cityId":2860},{"title":"昭通市","cityId":2878}]},{"title":"浙江省","children":[{"title":"杭州市","cityId":1009},{"title":"湖州市","cityId":1059},{"title":"金华市","cityId":1074},{"title":"嘉兴市","cityId":1050},{"title":"丽水市","cityId":1110},{"title":"宁波市","cityId":1024},{"title":"衢州市","cityId":1085},{"title":"绍兴市","cityId":1066},{"title":"台州市","cityId":1099},{"title":"温州市","cityId":1037},{"title":"舟山市","cityId":1093}]}
+            ],//可选择的城市
+        },
+        created: function () {
+            var cookie = this.getCookie('cookie');
+            if(cookie){
+                var cookieObject = JSON.parse(cookie);
+                var mainCity = cookieObject.mainCity;
+                var mainCityId = cookieObject.mainCityId;
+                var cityList = cookieObject.cityList;
+                if(mainCity)this.mainCity = mainCity;
+                if(mainCityId)this.mainCityId = mainCityId;
+                if(cityList&&cityList.length>0){
+                    this.cityList = cityList;
+                    var cityIdList = this.cityList.map(function(el,index){return el.cityId});
+                    for(var i=0;i<this.citys.length;i++){
+                        if(this.citys[i].children){
+                            for(var j=0;j<this.citys[i].children.length;j++){
+                                var cityId = this.citys[i].children[j].cityId;
+                                if(cityIdList.indexOf(cityId)>-1){
+                                    this.citys[i].children[j].checked = true;
+                                    // this.citys[i].expand = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        mounted: function () {
+
+        },
+        methods: {
+            openDrawer:function () {
+                this.isOpen = true;
+                closePlay();
+            },
+            closeDrawer:function () {
+                curYearMonth = '2016-01';
+                autoPlay();
+            },
+            renderContent:function (h, { root, node, data }) {
+                return h('span', {
+                    style: {
+                        display: 'inline-block',
+                        width: '100%'
+                    }
+                }, [
+                    h('span', [h('span',{class:data.children&&data.children.length>0?'provinceName':'cityName'}, data.title)]),
+                    h('span', {
+                        style: {
+                            display: 'inline-block',
+                            float: 'right',
+                            marginRight: '30px',
+                        }
+                    },
+                    [
+
+                        h('Tooltip', {
+                            props: Object.assign({},{
+                                placement: 'left',
+                                content:'指定为主城市',
+                            }),
+                        },[
+                            h('Icon', {
+                                props: Object.assign({},{
+                                    type: 'ios-star',
+                                }),
+                                style: {
+                                    marginRight: '8px',
+                                    cursor: 'pointer',
+                                    color: this.mainCity&&this.mainCity==data.title?'#2D8CF0':'#c2c2c2',
+                                    display: data.children&&data.children.length>0?'none':'auto'
+                                },
+                                on: {
+                                    click: () => {
+                                        if(!data.children){
+                                            app.mainCity = data.title;
+                                            app.mainCityId = data.cityId;
+                                        }
+                                }
+                             }
+                            }),
+                        ])
+                    ])
+                ]);
+            },
+            //tree：勾选事件
+            check: function (checkedNodes,curNode) {
+                this.cityList = [];
+                for(var i=0;i<checkedNodes.length;i++){
+                    if(!checkedNodes[i].cityId)continue;
+                    var item = {
+                        value: checkedNodes[i].title,
+                        label: checkedNodes[i].title,
+                        cityId: checkedNodes[i].cityId
+                    }
+                    this.cityList.push(item);
+                }
+                var cookie = {
+                    cityList: this.cityList,
+                    mainCity: this.mainCity,
+                    mainCityId: this.mainCityId
+                }
+                this.setCookie('cookie',JSON.stringify(cookie),30);
+                // this.setCookie('cityList',JSON.stringify(this.cityList),30);
+            },
+            changeCity:function (res) {
+                // var province = res.value;
+                var city = res.label;
+                for(var i=0;i<this.citys.length;i++){
+                    // var item = Object.assign(this.citys[i],{expand:false});
+                    var item = Object.assign({},this.citys[i]);
+                    item.expand = false;
+                    Vue.set(this.citys,i,item);
+                }
+                var index = 0;
+                for(var i=0;i<this.citys.length;i++){
+                    for(var j=0;j<this.citys[i].children.length;j++){
+                        if(this.citys[i].children[j].title == city){
+                            // var item = Object.assign(this.citys[i],{expand:true});
+                            var item = Object.assign({},this.citys[i]);
+                            item.expand = true;
+                            Vue.set(this.citys,i,item);
+                            index = i+1;
+                            break;
+                        }
+                    }
+                }
+                setTimeout(function(){
+                    var el = $('.ivu-drawer-body');
+                    el.scrollTop(el.prop("scrollHeight")*index/app.citys.length);
+                    $('.cityName').each(function(index,element){
+                        var $element = $(element);
+                        if($element.html() == app.searchCity){
+                            $element.css({"border":"1px solid red"})
+                        }else{
+                            $element.css({"border":"unset"})
+                        }
+                    })
+                },500);
+            },
+            setCookie: function (cname,cvalue,exdays) {
+                var d = new Date();
+                d.setTime(d.getTime()+(exdays*24*60*60*1000));
+                var expires = "expires="+d.toGMTString();
+                document.cookie = cname+"="+cvalue+"; "+expires;
+            },
+            getCookie: function (cname){
+                var name = cname + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0; i<ca.length; i++) {
+                    var c = ca[i].trim();
+                    if (c.indexOf(name)==0) { return c.substring(name.length,c.length); }
+                }
+                return "";
+            }
+        },
+        watch: {
+            // 如果值 发生改变，这个函数就会运行
+            mainCity: function (newValue, oldValue) {
+                var cookie = {
+                    cityList: this.cityList,
+                    mainCity: this.mainCity,
+                    mainCityId: this.mainCityId
+                }
+                this.setCookie('cookie',JSON.stringify(cookie),30);
+            }
+        },
+    });
+</script>
+<script src="js/visual.js"></script>
+</html>

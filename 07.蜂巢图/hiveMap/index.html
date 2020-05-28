@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>蜂巢图</title>
+    <link rel="stylesheet" href="libs/ol4.6.5/ol.css">
+    <script type="text/javascript" src="libs/jq/jquery-2.1.1.js"></script>
+    <script type="text/javascript" src="libs/ol4.6.5/ol.js"></script>
+    <script type="text/javascript" src="libs/hexbinsource.js"></script>
+    <script type="text/javascript" src="libs/hexgrid.js"></script>
+    <script type="text/javascript" src="libs/utils.js"></script>
+    <script type="text/javascript" src="libs/echarts.min.js"></script>
+</head>
+<style>
+    html, body, .map {
+        height: 100%;
+        overflow: hidden;
+        margin: 0px;
+    }
+    #map{
+        margin: 0px;
+    }
+    /* PanelRight */
+    .PanelRight{
+        position: absolute;
+        left: -600px;
+        top: 20px;
+        /*bottom: 20px;*/
+        max-height: calc(100% - 20px);
+        width: 400px;
+        background: #fff;
+        box-shadow:0px 2px 4px 0px rgba(0,0,0,0.3);
+        z-index: 1;
+        opacity: 0.8;
+    }
+    .PanelTitle{
+        font-weight: bold;
+        font-size: 13px;
+        color: #333;
+        line-height: 22px;
+        padding: 5px 15px;
+        background: #F5F8FB;
+    }
+    .PanelContent{padding: 10px;}
+
+    /* commonTitle */
+    .commonTitle{
+        position: relative;
+        padding-left: 8px;
+        color: #60A232;
+        font-size: 13px;
+        line-height: 18px;
+        margin: 8px auto;
+    }
+    .commonTitle::before{
+        position: absolute;
+        left: 0;
+        top: 50%;
+        margin-top: -7px;
+        content: "";
+        width: 3px;
+        height: 14px;
+        background: #60A232;
+    }
+    .commonChartTitle{font-size: 14px;line-height: 22px;text-align: center; color: #666;margin: 12px auto;}
+    /* commonPanel */
+    .commonPanel{
+        background-color: #fff;
+        border: 1px solid #EBEDF0;
+        margin-bottom: 20px;
+    }
+    .commonPanelHeader,
+    .commonPanel .header{
+        padding: 0 15px;
+        height: 40px;
+        line-height: 40px;
+        background: #FAFAFA;
+        /*border-top: 1px solid #EBEDF0;*/
+        border-bottom: 1px solid #EBEDF0;
+    }
+    .commonPanelFixed {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        z-index: 999;
+        left: 0;
+        margin-bottom: 0;
+        overflow: auto;
+        padding-top: 40px;
+    }
+    .commonPanelFixed .commonPanelHeader{
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 10;
+    }
+    .commonPanel .inner_content{
+        padding: 20px;
+    }
+    .commonPanel .header h2{float: left;}
+    .commonPanelHeader .tools,
+    .commonPanel .header .tools{
+        float: right;
+        color: #999;
+    }
+    .commonPanelHeader .tools i,
+    .commonPanel .header .tools i{
+        cursor: pointer;
+    }
+    .commonPanelHeader .tools i:hover,
+    .commonPanel .header .tools i:hover{
+        color: #60A232;
+    }
+    /*panelHeaderList*/
+    .panelHeaderList{
+
+    }
+    .panelHeaderList li{
+        font-weight: bold;
+        font-size: 14px;
+        padding: 0 22px;
+        float: left;
+        cursor: pointer;
+    }
+    /* commonTips */
+    .commonTips{
+        font-size: 14px;
+        color: #666;
+        line-height: 28px;
+        margin-bottom: 12px;
+    }
+    .panelHeaderList li.current{
+        position: relative;
+        color: #60A232;
+        background-color: #fff;
+        border-left: 1px solid #EBEDF0;
+        border-right: 1px solid #EBEDF0;
+    }
+    .panelHeaderList li.current::before{
+        position: absolute;
+        top: -1px;
+        left: 0;
+        height: 2px;
+        width: 100%;
+        content: "";
+        display: block;
+        background-color: #60A232;
+    }
+    /* 斑马黑白交替表格 */
+    .TableZebra{
+        width: 100%;
+    }
+    .TableZebra th,.TableZebra td{font-size: 12px;height: 32px;color: #000000;text-align: center;}
+    .TableZebra thead tr{background-color: #f5f8fb;}
+    .TableZebra tbody tr:nth-child(even){background-color: #f5f8fb;}
+    .TableZebra tbody tr:nth-child(odd){background-color: #fff;}
+
+    /*  */
+    .TableZebraBorder{width: 100%;margin-bottom: 10px;}
+    .TableZebraBorder th,.TableZebraBorder td{border: 1px solid #EBEDF0;font-size: 13px;height: 32px;color: #9598A4;text-align: center;}
+    .TableZebraBorder thead tr{background-color: #fff;}
+    .TableZebraBorder tbody tr:nth-child(even){background-color: #fff;}
+    .TableZebraBorder tbody tr:nth-child(odd){background-color: #F9F9F9;}
+
+    /* defaultTable */
+    .defaultTable{width: 100%;}
+    .defaultTable th,
+    .defaultTable td{border: 1px solid #EBEDF0;font-size: 13px;height: 32px;color: #9598A4;text-align: center;background-color: #fff;}
+    .defaultTable thead tr th{background-color: #F2F2F2;}
+
+    .canScrollTable {
+        width: 100%;
+        height: auto;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    @media screen and (max-height: 768px){
+        .canScrollTable{
+            height: 100px;
+        }
+    }
+
+
+    #legend1 {
+        z-index: 1;
+        bottom: 20px;
+        right: 20px;
+        position: fixed;
+        font-size: 14px;
+        color: #333;
+        display: block;
+    }
+    .geostats-legend{
+        padding: 10px;
+        background: rgba(255,255,255);
+        padding: 10px;
+        border-radius: 6px;
+        -webkit-box-shadow: #ccc 0px 0px 6px;
+        -moz-box-shadow: #ccc 0px 0px 6px;
+        box-shadow: #ccc 0px 0px 6px;
+    }
+    .geostats-legend>div {
+        margin: 2.5px 10px 2.5px 7px;
+    }
+    .geostats-legend-title {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .geostats-legend-block {
+        width:22px;
+        height:12px;
+        border-radius:4px;
+        display: block;
+        float: left;
+        height: 16px;
+        margin: 0 5px 0 0px;
+        opacity: 0.8;
+    }
+
+    .geostats-legend-counter {
+        font-size: 0.8em;
+        color: #666;
+        font-style: italic;
+    }
+</style>
+<body>
+<div id="map" class="map">
+    <div class="PanelRight" id="PanelRight">
+        <div class="commonTitle" id="commonTitle1">雷达图</div>
+        <div id="lineBarECharts" style="width: 100%;height: 220px;"></div>
+
+        <div class="commonTitle" id="commonTitle2">小区</div>
+        <!-- table start -->
+        <table class="TableZebra">
+            <col width="25%"></col>
+            <col width="25%"></col>
+            <thead id="tabThead">
+            <tr>
+                <th>小区</th>
+                <th>价格(元)</th>
+            </tr>
+            </thead>
+        </table>
+        <div class="canScrollTable">
+            <table class="TableZebra">
+                <col width="25%"></col>
+                <col width="25%"></col>
+                <tbody id="tabTbody">
+                </tbody>
+            </table>
+        </div>
+        <!-- table end -->
+    </div>
+    <html>
+    <head></head>
+    <body>
+    <div id="legend1">
+        <div class="geostats-legend">
+            <div class="geostats-legend-title">
+                <div style="left: 10px">
+                    楼盘数量(个)
+                </div>
+            </div>
+            <div>
+                <div class="geostats-legend-block" style="background-color:#2ff5f7"></div>0 - 5
+                <span class="geostats-legend-counter"></span>
+            </div>
+            <div>
+                <div class="geostats-legend-block" style="background-color:#2ff750"></div>5 - 10
+                <span class="geostats-legend-counter"></span>
+            </div>
+            <div>
+                <div class="geostats-legend-block" style="background-color:#ffea00"></div>10 - 15
+                <span class="geostats-legend-counter"></span>
+            </div>
+            <div>
+                <div class="geostats-legend-block" style="background-color:#ffa800"></div>20 - 25
+                <span class="geostats-legend-counter"></span>
+            </div>
+            <div>
+                <div class="geostats-legend-block" style="background-color:#ff0000"></div>25以上
+                <span class="geostats-legend-counter"></span>
+            </div>
+        </div>
+    </div>
+    </body>
+    </html>
+</div>
+</body>
+<script type="text/javascript" src="mapInit.js"></script>
+<script type="text/javascript" src="hivemap.js"></script>
+<script>
+
+    window.onload = function() {
+        var url = 'http://geoserver.cindata.cn/geoserver/gxd/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=gxd:gp_community_bj&maxFeatures=10000&outputFormat=application%2Fjson';
+        hiveMap.init(url)
+    }
+    $('.ol-zoom').css('display', 'none')
+</script>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>小区年份价格关系可视化</title>
+
+    <link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/themes/dark-blue/main.css">
+    <script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+
+    <style>
+        html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    #infoDiv {
+      background-color: #242424;
+      padding: 10px;
+      overflow: auto;
+    }
+  </style>
+
+    <script>
+        require([
+            "esri/views/SceneView",
+            "esri/Map",
+            "esri/layers/FeatureLayer",
+            "esri/layers/MapImageLayer",
+            "esri/Basemap",
+            "esri/widgets/Legend",
+            "esri/renderers/smartMapping/creators/relationship"
+        ], function (
+            SceneView,
+            Map,
+            FeatureLayer,
+            MapImageLayer,
+            Basemap,
+            Legend,
+            relationshipRendererCreator
+        ) {
+                const layer = new FeatureLayer({
+                    // url: "http://ypgis.cindata.cn/arcgis/rest/services/bjxqpt/MapServer/0",
+                    url: "http://tilesvc.cindata.cn/arcgis/rest/services/special_map/bj_xiaoqu_point/MapServer/0",
+                    title: "北京小区",
+                    popupTemplate: { 
+                        title: "{label}",
+                        content: [{
+                            type: "fields",
+                            fieldInfos: [{
+                                fieldName: "avg_price",
+                                label: "平均价格"
+                            }, {
+                                fieldName: "buildyear",
+                                label: "建成年份"
+                            }]
+                        }]
+                    },
+                    // definitionExpression: "house_type='1000' and avg_price <>0",   // and avg_price <>0
+                    definitionExpression: "avg_price <>0",
+                    outFields: ["label", "avg_price", "buildyear"]
+                });
+
+                var baseLayer = new MapImageLayer({
+                    url: "http://tilesvc.cindata.cn/arcgis/rest/services/comm/ChinaGray/MapServer",
+                    legendEnabled: false,
+                    imageFormat: "png"
+                });
+                var baseMap = new Basemap({
+                    baseLayers: [baseLayer],
+                    title: "ChinaGray",
+                    id: "ChinaGray"
+                });
+
+                const map = new Map({
+                    basemap: baseMap,
+                    // ground: "world-elevation",
+                    layers: [layer]
+                });
+
+                const view = new SceneView({
+                    container: "viewDiv",
+                    map: map,
+                    camera: {
+                        position: {
+                            x: 12959305.840922154,
+                            y: 4769983.310491453,
+                            z: 84164.56480063219,
+                            spatialReference: {
+                                wkid: 3857
+                            }
+                        },
+                        fov: 60,
+                        heading: 0,
+                        tilt: 36.67
+                    }
+                });
+
+                const legend = new Legend({
+                    view: view,
+                    container: "legendDiv"
+                });
+                view.ui.add("infoDiv", "bottom-right");
+                view.ui.remove(["attribution", "navigation-toggle"]);
+
+                const showDescriptiveLabelsElement = document.getElementById("descriptive-labels");
+
+                view.when()
+                    .then(function () {
+                        // switches the labels of the legend each time the user checks/unchecks the box
+                        showDescriptiveLabelsElement.addEventListener("change", function (event) {
+                            const renderer = changeRendererLabels(layer.renderer.clone(), showDescriptiveLabelsElement.checked);
+                            applyRenderer(renderer);
+                        });
+                        return layer.when();
+                    })
+                    .then(createRelationshipRenderer)
+                    .then(function (response) {                  
+                        const renderer = changeRendererLabels(response.renderer, showDescriptiveLabelsElement.checked);
+                        // changeSymbols(renderer);
+                        applyRenderer(renderer);
+                    });
+
+                    function changeSymbols(renderer){
+                        renderer.uniqueValueInfos.forEach(function (info) {
+                        info.symbol.callout = {
+                            type: "line",
+                            size: 1,
+                            color: [150, 150, 150],
+                            border: {
+                                color: [50, 50, 50]
+                            }
+                        };
+                        info.symbol.verticalOffset = {
+                            screenLength: 40,
+                            maxWorldLength: 200,
+                            minWorldLength: 35
+                        };
+                    });
+                    }
+
+                /**
+                 * Generates a relationship renderer based on the StarScore and ElectricUse fields. StarScore is a numeric score
+                 * from 0 - 100, indicating the energy efficiency of a building. The ElectricUse score indicates the amount of
+                 * energy used by a building. This function returns a promise which resolves to an object containing the final
+                 * renderer.
+                 */
+                function createRelationshipRenderer() {
+                    const params = {
+                        layer: layer,
+                        view: view,
+                        basemap: map.basemap,
+                        field1: {
+                            field: "buildyear"
+                        },
+                        field2: {
+                            field: "avg_price"
+                        },
+                        focus: "HH",
+                        numClasses: 3,
+                        symbolType: "3d-flat",
+                        legendOptions: {
+                            title: "建成年份与平均价格之间的关系",
+                            showLegend: false
+                        },
+                        defaultSymbolEnabled: false
+                        //   edgesType: "solid"
+                    };
+
+                    return relationshipRendererCreator.createRenderer(params);                    
+                }
+
+                function applyRenderer(renderer) {                    
+                    // renderer.defaultSymbol = {
+                    //                 type: "point-3d",
+                    //                 symbolLayers: [{
+                    //                     type: "icon",
+                    //                     anchor: "center",
+                    //                     outline: {
+                    //                         color: 'gray',
+                    //                         size: 0.5
+                    //                     },
+                    //                     resource: {
+                    //                         primitive: "kite"
+                    //                     },
+                    //                     size: 10,
+                    //                     material: {
+                    //                         color: [255, 255, 0, 1]
+                    //                     }
+                    //                 }],
+                    //                 verticalOffset: {
+                    //                     screenLength: 40,
+                    //                     maxWorldLength: 200,
+                    //                     minWorldLength: 35
+                    //                 },
+                    //                 callout: {
+                    //                     type: "line",
+                    //                     size: 1,
+                    //                     color: [150, 150, 150],
+                    //                     border: {
+                    //                         color: [50, 50, 50]
+                    //                     }
+                    //                 }
+                    //             };
+                    // renderer.defaultLabel = "其他值";
+                    layer.renderer = renderer;
+                }
+
+                /**
+                * Changes the labels and orientation of the relationship legend.
+                *
+                * @param {module:esri/renderers/UniqueValueRenderer} renderer - An instance of a relationship renderer.
+                * @param {boolean} showDescriptiveLabels - Indicates whether to orient the legend as a diamond and display
+                *   descriptive labels. If `false`, then the legend is oriented as a square with numeric labels, similar to
+                *   a chart with an x/y axis.
+                *
+                * @return {renderer} - The input renderer with the modified descriptions and orientation.
+                */
+                function changeRendererLabels(renderer, showDescriptiveLabels) {
+
+                    const numClasses = renderer.authoringInfo.numClasses;
+                    const field1max = renderer.authoringInfo.field1.classBreakInfos[numClasses - 1].maxValue;
+                    const field2max = renderer.authoringInfo.field2.classBreakInfos[numClasses - 1].maxValue;
+
+                    renderer.uniqueValueInfos.forEach(function (info) {
+                        info.symbol.symbolLayers.items[0].resource.primitive = showDescriptiveLabels ? "kite" : "square";
+                        info.symbol.symbolLayers.items[0].size = showDescriptiveLabels ? 8 : 6;
+                        switch (info.value) {
+                            case "HH":
+                                info.label = showDescriptiveLabels ? "建成新, 价格高" : "";
+                                break;
+                            case "HL":
+                                info.label = showDescriptiveLabels ? "建成新, 价格低" : field1max.toLocaleString();
+                                break;
+                            case "LH":
+                                info.label = showDescriptiveLabels ? "建成久, 价格高" : field2max.toLocaleString();
+                                break;
+                            case "LL":
+                                info.label = showDescriptiveLabels ? "建成久, 价格低" : 0;
+                                break;
+                        }                        
+                    });
+
+                    // When a focus is specified, the legend renders as a diamond with the
+                    // indicated focus value on the top. If no value is specified, then
+                    // the legend renders as a square
+
+                    renderer.authoringInfo.focus = showDescriptiveLabels ? "HH" : null;
+                    return renderer;
+                }
+
+            });
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv"></div>
+    <div id="infoDiv" class="esri-widget">
+        <input type="checkbox" id="descriptive-labels" class="esri-widget" checked>
+        显示文字描述
+        <div id="legendDiv"></div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  <title>北京市2018年9月份房价示意图</title>
+  <!--<link rel='stylesheet' href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css'>-->
+  <link rel="stylesheet" href="css/mapbox-gl.css">
+  <script src="js/jquery-1.11.3.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+
+    #title {
+      position: absolute;
+      color: black;
+      left: 40%;
+      top: 30px;
+      text-align: center;
+      width: 500px;
+      z-index: 2;
+    }
+
+    #title > h3 {
+      margin: 10px 0;
+      letter-spacing: 0.1em;
+    }
+
+    #title > h6 {
+      margin: 0;
+      font-weight: normal;
+    }
+
+    .whiteBackground {
+      background-color: rgba(225, 225, 225, 0.1);
+      border-top: 1px dotted;
+      border-image: linear-gradient(to right, rgba(114, 159, 207, 1), rgba(104, 104, 104, 1) 200px, rgba(104, 104, 104, 0) 75%) 30;
+    }
+
+    .legendContainer {
+      position: absolute;
+      bottom: 25px;
+      right: 25px;
+      color: white;
+      padding: 10px 10px 0px 10px;
+      z-index: 1000;
+    }
+
+    .legendHead {
+      align-self: flex-end;
+    }
+
+    .legendBody {
+      padding-top: 10px;
+    }
+    #tooltip:empty {
+      display: block;
+    }
+    #tooltip {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      position: absolute;
+      padding: 4px;
+      margin: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      max-width: 300px;
+      font-size: 10px;
+      z-index: 9;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<!--<div id="control-panel">-->
+<!--<div>-->
+<!--<label>Radius</label>-->
+<!--<input id="radius" type="range" min="1000" max="20000" step="1000" value="1000"></input>-->
+<!--<span id="radius-value"></span>-->
+<!--</div>-->
+<!--<div>-->
+<!--<label>Coverage</label>-->
+<!--<input id="coverage" type="range" min="0" max="1" step="0.1" value="1"></input>-->
+<!--<span id="coverage-value"></span>-->
+<!--</div>-->
+<!--<div>-->
+<!--<label>Upper Percentile</label>-->
+<!--<input id="upperPercentile" type="range" min="90" max="100" step="1" value="100"></input>-->
+<!--<span id="upperPercentile-value"></span>-->
+<!--</div>-->
+<!--</div>-->
+<div id="tooltip"></div>
+<div class="legendContainer whiteBackground">
+  <div class="legendHead _flex">
+    <div style="color: black">图例</div>
+  </div>
+  <div class="legendBody _flex">
+    <svg width="120" height="100" id="legened">
+      <g transform="translate(0, 0)" style="cursor:pointer;">
+        <rect width="30" height="20" style="fill: rgb(70,186,57);"></rect>
+        <text x="38" y="14" fill="black" value="true" color="rgb(70,186,57)" >住宅</text>
+      </g>
+      <g transform="translate(0, 24)" style="cursor:pointer;" >
+        <rect width="30" height="20" style="fill: rgb(178,100,255);"></rect>
+        <text x="38" y="14" fill="black" value="true" color="rgb(178,100,255)" >商业</text>
+      </g>
+      <g transform="translate(0, 48)" style="cursor:pointer;">
+        <rect width="30" height="20" style="fill: rgb(87,130,255);"></rect>
+        <text x="38" y="14" fill="black" value="true" color="rgb(87,130,255)" >办公</text>
+      </g>
+      <g transform="translate(0, 72)" style="cursor:pointer;">
+        <rect width="30" height="20" style="fill: rgb(34,120,128);"></rect>
+        <text x="38" y="14" fill="black" value="true" color="rgb(34,120,128)" >工业</text>
+      </g>
+    </svg>
+  </div>
+
+</div>
+<script src='js/mapbox-gl.js'></script>
+<script src='js/deckgl.min.js'></script>
+<script src='js/d3.min.js'></script>
+
+
+
+<script  src="js/index.js"></script>
+
+
+
+
+</body>
+
+</html>

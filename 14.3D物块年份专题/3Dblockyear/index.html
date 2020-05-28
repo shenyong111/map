@@ -1,0 +1,637 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>楼栋物块3D年份专题</title>
+    <script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <link rel='stylesheet' href='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.css'/>
+    <script src='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.js'></script>
+    <link rel="stylesheet" href="js/citySelect/citySelect/common.css">
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+    <script type="text/javascript" src="js/citySelect/citySelect/citySelect.js"></script>
+</head>
+<body>
+<div id='app'>
+    <div id='map'></div>
+    <div class="button-legendToggle" v-show="!legendSpecial.isShow" @click="legendToggleClick(true)"></div>
+    <div class="legend" v-show="legendSpecial.isShow">
+        <div class="button-close" @click="legendToggleClick(false)">x</div>
+        <div class="legend-title">{{areaInfo.name+'：电梯状况'}}</div>
+        <ul class="legend-content">
+            <li class="legend-item mid">
+                <span class="line"></span>
+                <span class="txt">准确</span>
+                <span class="line"></span>
+            </li>
+            <li class="legend-item">
+                <div class="item-color" :class="{select:legendSpecial.isSelect['0'],unselect:!legendSpecial.isSelect['0'],}" @click="legendSpecialItemClick('0')"></div>
+                <span class="item-text" style="padding-left: 2px;">有</span>
+                <div style="margin-left: 30px;" class="item-color" :class="{select:legendSpecial.isSelect['1'],unselect:!legendSpecial.isSelect['1'],}" @click="legendSpecialItemClick('1')"></div>
+                <span class="item-text" style="padding-left: 2px;">无</span>
+            </li>
+            <li class="legend-item mid">
+                <span class="line"></span>
+                <span class="txt">推测</span>
+                <span class="line"></span>
+            </li>
+            <li class="legend-item">
+                <div class="item-color" :class="{select:legendSpecial.isSelect['2'],unselect:!legendSpecial.isSelect['2'],}" @click="legendSpecialItemClick('2')"></div>
+                <span class="item-text" style="padding-left: 2px;">有</span>
+                <div style="margin-left: 30px;" class="item-color" :class="{select:legendSpecial.isSelect['3'],unselect:!legendSpecial.isSelect['3'],}" @click="legendSpecialItemClick('3')"></div>
+                <span class="item-text" style="padding-left: 2px;">无</span>
+            </li>
+        </ul>
+        <div class="legend-title" style="margin-top: 10px">{{areaInfo.name+'：其他'}}</div><ul class="legend-content">
+        <li class="legend-item mid">
+            <span class="line"></span>
+            <span class="txt">自建房</span>
+            <span class="line"></span>
+        </li>
+        <li class="legend-item">
+            <div class="item-color" :class="{select:legendSpecial.isSelect['4'],unselect:!legendSpecial.isSelect['4'],}" @click="legendSpecialItemClick('4')"></div>
+            <span class="item-text" style="padding-left: 2px;">是</span>
+            <div style="margin-left: 30px;" class="item-color" :class="{select:legendSpecial.isSelect['5'],unselect:!legendSpecial.isSelect['5'],}" @click="legendSpecialItemClick('5')"></div>
+            <span class="item-text" style="padding-left: 2px;">否</span>
+        </li>
+        <li class="legend-item mid">
+            <span class="line"></span>
+            <span class="txt">老小区</span>
+            <span class="line"></span>
+        </li>
+        <li class="legend-item">
+            <div class="item-color" :class="{select:legendSpecial.isSelect['6'],unselect:!legendSpecial.isSelect['6'],}" @click="legendSpecialItemClick('6')"></div>
+            <span class="item-text" style="padding-left: 2px;">是</span>
+            <div style="margin-left: 30px;" class="item-color" :class="{select:legendSpecial.isSelect['7'],unselect:!legendSpecial.isSelect['7'],}" @click="legendSpecialItemClick('7')"></div>
+            <span class="item-text" style="padding-left: 2px;">否</span>
+        </li>
+    </ul>
+    </div>
+    <div class="legend"
+         v-for="(value,key) in legend"
+         v-show="value.isShow">
+        <div class="legend-title">{{areaInfo.name+value.title}}</div>
+        <ul class="legend-content">
+            <li class="legend-item" v-for="(item,index) in value.content">
+                <div class="item-color"
+                     :style="{'background-color': item.color}"
+                     :class="{unselect: !item.isSelect}"
+                     @click="legendItemClick(item)"></div>
+                <span class="item-text">{{item.text}}</span>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="citySelect-show" class="suspended-frame">
+    <span>哈尔滨市</span>
+    <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+</div>
+<div id="citySelectDiv" style="display:none;" class="suspended-frame">
+    <div id="citySelect-title">当前城市：哈尔滨市</div>
+    <div id="citySelect-content">
+        <ul id="citySelect-popular">
+            <li name="北京市">北京市</li>
+            <li name="沈阳市">沈阳市</li>
+            <li name="哈尔滨市">哈尔滨市</li>
+            <li name="上海市">上海市</li>
+            <li name="杭州市">杭州市</li>
+            <li name="青岛市">青岛市</li>
+            <li name="武汉市">武汉市</li>
+            <li name="广州市">广州市</li>
+            <li name="深圳市">深圳市</li>
+            <li name="重庆市">重庆市</li>
+            <li name="成都市">成都市</li>
+        </ul>
+        <div id="citySelect-toolbar">
+            <div id="citySelect-province" class="citySelect-btn">按省份</div>
+            <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+            <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+            <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+            </ul>
+            <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+            </ul>
+        </div>
+        <div id="citySelect-list">
+            <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+            </dl>
+            <dl id="citySelect-city-list" class="citySelect-list">
+            </dl>
+        </div>
+    </div>
+</div>
+<style>
+    html, body {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+        background-color: #00192E;
+    }
+    #app,
+    #map{
+        width:100%;
+        height:100%;
+    }
+    #citySelect-show{
+        right: unset;
+        left: 20px;
+    }
+    #citySelectDiv{
+        right: unset;
+        left: 20px;
+    }
+    .button-legendToggle{
+        background: url(images/filter_16.png) no-repeat;
+        position: absolute;
+        background-color: rgb(255, 255, 255);
+        box-shadow: rgba(0, 0, 0, 0.2) 1px 1px 2px;
+        right: 20px;
+        bottom: 260px;
+        border-radius: 2px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+    .legend:nth-child(3){
+        bottom: 260px !important;
+    }
+    .line{
+        display: inline-block;
+        width: 30px;
+        border-top: 1px solid #ccc;
+        vertical-align: 4px;
+    }
+    .legend-item.mid{
+        text-align: center;
+    }
+    .item-color.select{
+        background: url("images/right.png") no-repeat;
+        background-color: rgba(0,0,0,0);
+        border: 1.5px solid rgba(0,0,0,0.24);
+    }
+    .legend>.button-close{
+        position: absolute;
+        top: 0px;
+        right: 3px;
+        cursor: pointer;
+    }
+    /*常规的图例*/
+    .legend{
+        position: absolute;
+        background-color: rgb(255, 255, 255);
+        box-shadow: rgba(0, 0, 0, 0.2) 1px 1px 2px;
+        right: 20px;
+        bottom: 20px;
+        border-radius: 5px;
+        width: 110px;
+        padding: 10px;
+        font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        font-stretch: 100%;
+    }
+    .legend-title{
+        height: 20px;
+        line-height: 20px;
+        color: rgba(102, 102, 102, 1);
+        font-weight: bold;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    .legend-content{
+        padding-left: 5px;
+        margin-top: 10px;
+        margin-bottom: 0px;
+    }
+    .legend-item{
+        white-space: nowrap;
+        list-style: none;
+        margin-bottom: 5px;
+    }
+    .item-color{
+        display: inline-block;
+        vertical-align: middle;
+        width: 15px;
+        height: 15px;
+        background-color: #aaaaaa;
+        border: 1.5px solid #fff;
+        box-shadow: 0 2px 5px 0 rgba(0,0,0,0.24);
+        cursor: pointer;
+        /*border-radius: 50%;*/
+    }
+    .item-color.unselect{
+        background-color: rgba(0,0,0,0) !important;
+        border: 1.5px solid rgba(0,0,0,0.24);
+    }
+    .item-text{
+        display: inline-block;
+        vertical-align: middle;
+        padding-left: 10px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        max-width: 120px;
+        color: rgba(102, 102, 102, 1);
+    }
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            areaInfo: {
+                name: '哈尔滨市',
+                level: 2,
+                other: {
+                    properties:{
+                        avg_price: 66005
+                    }
+                }
+            },
+            map: null,
+            popup: new mapboxgl.Popup({
+                closeButton: true,
+                closeOnClick: false
+            }),
+            mapFilter:['all',true],
+            featureClicked: null,
+            section : [
+                [0, "#eeeeee"],
+                [1980, "#6A4731"],
+                [1985, "#975E2D"],
+                [1990, "#D17F1F"],
+                [2000, "#F4A800"],
+                [2005, "#F8C100"],
+                [2010, "#FFDF00"],
+                [2015, "#FFF800"]
+            ],
+            legendSpecial: {
+                isShow:true,
+                isSelect:{
+                    '0':true,
+                    '1':true,
+                    '2':true,
+                    '3':true,
+                    '4':true,
+                    '5':true,
+                    '6':true,
+                    '7':true,
+                },
+                filter:{
+                    '0':['all', ["!=", 'iflift_accuracy', '0']],
+                    '1':['all', ["==", 'iflift_accuracy', '0']],
+                    '2':['all', ["!=", 'iflift_guess', '0']],
+                    '3':['all', ["==", 'iflift_guess', '0']],
+                    '4':['all', ["!=", 'if_zjf', 0]],
+                    '5':['all', ["==", 'if_zjf', 0]],
+                    '6':['all', ["!=", 'if_old_community', 0]],
+                    '7':['all', ["==", 'if_old_community', 0]],
+                },
+            },
+            legend: {
+                'one': {
+                    isShow: true,
+                    title: '：建成年份',
+                    content: [
+                        {
+                            color: '#FFF800',
+                            isSelect: true,
+                            text: '2015年至今',
+                            filter: ['all', [">=", 'buildyear', 2015]]
+                        },
+                        {
+                            color: '#FFDF00',
+                            isSelect: true,
+                            text: '2010 ~ 2015年',
+                            filter: ['all', [">=", 'buildyear', 2010], ["<", 'buildyear', 2015]]
+                        },
+                        {
+                            color: '#F8C100',
+                            isSelect: true,
+                            text: '2005 ~ 2010年',
+                            filter: ['all', [">=", 'buildyear', 2005], ["<", 'buildyear', 2010]]
+                        },
+                        {
+                            color: '#F4A800',
+                            isSelect: true,
+                            text: '2000 ~ 2005年',
+                            filter: ['all', [">=", 'buildyear', 2000], ["<", 'buildyear', 2005]]
+                        },
+                        {
+                            color: '#D17F1F',
+                            isSelect: true,
+                            text: '1990 ~ 2000年',
+                            filter: ['all', [">=", 'buildyear', 1990], ["<", 'buildyear', 2000]]
+                        },
+                        {
+                            color: '#975E2D',
+                            isSelect: true,
+                            text: '1985 ~ 1990年',
+                            filter: ['all', [">=", 'buildyear', 1985], ["<", 'buildyear', 1990]]
+                        },
+                        {
+                            color: '#6A4731',
+                            isSelect: true,
+                            text: '1980 ~ 1985年',
+                            filter: ['all', [">=", 'buildyear', 1980], ["<", 'buildyear', 1985]]
+                        },
+                        {color: '#eeeeee', isSelect: true, text: '未知', filter: ['none',[">=", 'buildyear', 1980]]},
+                    ]
+                },
+            }
+        },
+        created: function () {
+
+        },
+        methods: {
+            legendToggleClick:function (isShow) {
+                this.legendSpecial.isShow = isShow;
+            },
+            legendSpecialItemClick: function (index) {
+                this.legendSpecial.isSelect[index] = !this.legendSpecial.isSelect[index];
+                this.setFilter();
+            },
+            legendItemClick: function (item) {
+                item.isSelect = !item.isSelect;
+                this.setFilter();
+                // var filter=['any'];
+                // var legend = this.legend['one'];
+                // for(var i = 0;i<legend.content.length;i++){
+                //     if(legend.content[i].isSelect)filter.push(legend.content[i].filter);
+                // }
+                // if(filter.length == 1)filter.push(false);
+                // this.mapFilter = filter;
+                // var layers = app.map.getStyle().layers;
+                // for(var i=1;i<layers.length;i++){
+                //     this.map.setFilter(layers[i].id,filter);
+                // }
+            },
+            setFilter: function () {
+                var filter=['all',['any'],['any']];
+                /*legendSpecial*/
+                for(var index in this.legendSpecial.isSelect){
+                    if(this.legendSpecial.isSelect[index])filter[1].push(this.legendSpecial.filter[index]);
+                }
+                /*legend*/
+                var legend = this.legend['one'];
+                for(var i = 0;i<legend.content.length;i++){
+                    if(legend.content[i].isSelect)filter[2].push(legend.content[i].filter);
+                }
+                if(filter[1].length == 1 || filter[2].length == 1)filter=['all',false];
+                this.mapFilter = filter;
+                var layers = app.map.getStyle().layers;
+                for(var i=1;i<layers.length;i++){
+                    this.map.setFilter(layers[i].id,filter);
+                }
+            }
+        },
+        watch: {
+            // 如果 `areaInfo` 发生改变，这个函数就会运行
+            areaInfo: function (newAreaInfo, oldAreaInfo) {
+                var cityCode = app.areaInfo.other.properties.zone_number.substring(0, 4);
+                addLayer_block(cityCode);
+            }
+        },
+    });
+    initMap();
+    function initMap() {
+        mapboxgl.accessToken = 'pk.eyJ1Ijoiam5leCIsImEiOiJjamw0a3UyejkwNTl5M3Bqb29oa3AxeTNyIn0.TkW5lUoMnYJW2xJoVGNk3g';
+        var basemapUrl = 'http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaGray/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
+        var style = {
+            light: {
+                "anchor": "viewport",
+                "color": "white",
+                "intensity": 0.3,
+                "position": [100,250,45]
+            },
+            version: 8,
+            glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+            sources: {
+                "ChinaGray": {
+                    "type": "raster",
+                    "tiles": [basemapUrl],
+                    "tileSize": 256
+                },
+            },
+            layers: [{
+                "id": "baseMap",
+                "type": "raster",
+                "source": "ChinaGray"
+            }]
+        };
+        app.map = new mapboxgl.Map({
+            container: 'map',
+            style: style,
+            minZoom: 13,
+            maxZoom: 24,
+            bearing: 0,
+            pitch: 60,
+            zoom: 16,
+            // center: [116.39358594999999, 39.90533639999998],
+            center: [126.66932038252615, 45.75026603669948],
+            // zoom: 3.3730078727134853,
+            // center: [106.74769083687772, 36.73816806558061],
+            preserveDrawingBuffer: true
+        });
+        app.map.addControl(new mapboxgl.NavigationControl(), 'bottom-left');
+        app.map.on('load', function () {
+            addLayer_block(2301);
+        });
+        app.map.on('moveend', function () {
+            var currentZoom = app.map.getZoom();
+            var bbox = [app.map.getBounds()._sw.lng, app.map.getBounds()._sw.lat, app.map.getBounds()._ne.lng, app.map.getBounds()._ne.lat];
+            queryAreaInfo(currentZoom, bbox, function (areaInfo) {
+                if (areaInfo && areaInfo.name!= app.areaInfo.name) {
+                    app.areaInfo = areaInfo;
+                    $('#citySelect-show>span').html(app.areaInfo.name);
+                }
+            });
+        });
+    }
+    function queryAreaInfo(zoom,bbox,success) {
+        if (zoom < 1) {
+            success({name: '全国', level: 0, other: {}});
+        } else {
+            var level, url, typeName, maxFeatures;
+            if (zoom >= 1 && zoom < 2) {
+                level = 1;
+                url = 'http://geoserver.cindata.cn/geoserver/cim/ows';
+                typeName = 'gp_province';
+                maxFeatures = 100;
+            } else {
+                level = 2;
+                url = 'http://geoserver.cindata.cn/geoserver/cim/ows';
+                typeName = 'gr_city_cim';
+                maxFeatures = 500;
+            }
+            $.ajax({
+                type: "post",
+                async: true,
+                url: url,
+                data: {
+                    service: "WFS",
+                    version: "1.0.0",
+                    request: "GetFeature",
+                    typeName: typeName,
+                    maxFeatures: maxFeatures,
+                    outputFormat: "application/json",
+                    // bbox: bbox.join(',')
+                },
+                success: function (geojson) {
+                    if(!geojson||geojson.features.length==0)return null;
+                    //查询到多个要素时，返回距离中心点最近的
+                    var center = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2];
+                    var minIndex = 0;
+                    var minCoordinates = geojson.features[minIndex].geometry.coordinates;
+                    var minDistance = Math.pow(minCoordinates[0] - center[0], 2) + Math.pow(minCoordinates[1] - center[1], 2);
+                    for (var i = 0; i < geojson.features.length; i++) {
+                        if(!geojson.features[i].geometry||!geojson.features[i].geometry.coordinates)continue;
+                        var curCoordinates = geojson.features[i].geometry.coordinates;
+                        var curDistance = Math.pow(curCoordinates[0] - center[0], 2) + Math.pow(curCoordinates[1] - center[1], 2);
+                        if (curDistance < minDistance) {
+                            minDistance = curDistance;
+                            minIndex = i;
+                        }
+                    }
+                    success({
+                        name: geojson.features[minIndex].properties.name,
+                        level: level,
+                        other: geojson.features[minIndex]
+                    });
+                }
+            });
+        }
+    }
+    //添加原始图层
+    function addLayer_block(cityCode) {
+        if(app.map.getLayer('block_'+cityCode))return;
+        app.map.addLayer({
+            "id": 'block_'+cityCode,
+            'type': 'fill-extrusion',
+            'source': {
+                "type": "vector",
+                'scheme': 'tms',
+                'tiles': ['http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/gxd:gr_block_'+cityCode+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf'],
+            },
+            'source-layer': "gr_block_" + cityCode,
+            'filter':app.mapFilter,
+            'paint': {
+                'fill-extrusion-color': {
+                    "property": "buildyear",
+                    "type": "interval",
+                    "stops": app.section,
+                    "default": "#D6D6D4"
+                },
+                'fill-extrusion-height': ['*', ['get', 'totalfloor'], 3],
+                'fill-extrusion-opacity': .9
+            },
+            "interactive": true
+        });
+        addPopup('block_'+cityCode,['community_name','building_name', 'groundlayer','structure','buildyear', 'price','iflift_accuracy','iflift_guess','if_zjf','if_old_community'],['小区名称','建筑名称','地上层数','建筑结构','建成年份','价格','准确','推测','自建房','老小区']);
+    }
+    //添加气泡
+    function addPopup(layerId, properties, propertienames) {
+        if (app.featureClicked) {
+            app.map.off('click', layerId, function (e) {
+            });
+            app.popup.setHTML(getPopupHtmlByProperties(properties, propertienames))
+        }
+
+        // var properties = ['avg_price','area_cnt','area_id','area_level	','avg_price','building_cnt','city_id	','community_cnt','created_dt','	house_cnt'];
+        app.map.on('click', layerId, function (e) {
+            featureClicked = e.features[0];
+            var html = getPopupHtmlByProperties(properties, propertienames);
+            app.popup.setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(app.map);
+        });
+        // Change the cursor to a pointer when the mouse is over the states layer.
+        app.map.on('mouseenter', layerId, function () {
+            app.map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Change it back to a pointer when it leaves.
+        app.map.on('mouseleave', layerId, function () {
+            app.map.getCanvas().style.cursor = '';
+        });
+    }
+
+    //获取气泡html
+    function getPopupHtmlByProperties(properties, propertienames) {
+        var maxlength = 30
+        var html = '';
+        if (!properties || properties.length == 0) {
+            properties = [];
+            for (var property in featureClicked.properties) {
+                properties.push(property);
+            }
+        }
+        if (!propertienames) propertienames = properties;
+        for (var index=0; index< properties.length;index++) {
+            var property = properties[index];
+            var propertiename = propertienames[index];
+            var value = featureClicked.properties[properties[index]];
+            if (!propertiename) propertiename = property;
+            if(property=='plotratio')value =Math.round(value*100)/100;
+            if(property=='iflift_accuracy' || property=='iflift_guess')value = value=='0'?'无电梯':'有电梯';
+            if(property=='if_zjf' || property=='if_old_community')value = value==1?'是':'否';
+            if (!value) value = '-';
+            if (value.length > maxlength) value = value.substr(0, maxlength);
+            html += '<div><label>' + propertiename + '：</label><label title="'+ featureClicked.properties[properties[index]]+'">' + value + '</label></div>';
+        }
+        return html;
+    }
+</script>
+<script>
+    var ctrl = {
+        area: null,
+        cityId: 2,
+        swicthCity: function (area) {
+            this.area = area;
+            this.cityId = area.areaId;
+            var filter =
+                '&filter=' +
+                '<PropertyIsEqualTo>' +
+                '<PropertyName>city_id</PropertyName>' +
+                '<Literal>' + this.cityId + '</Literal>' +
+                '</PropertyIsEqualTo>'
+            var url = 'http://geoserver.cindata.cn/geoserver/cim/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=cim:gp_city'
+                + filter +
+                '&maxFeatures=100&outputFormat=application%2Fjson'
+            $.ajax({
+                url: url,
+                type: 'get',
+                async: false,
+                success: function (data) {
+                    var center = data.features[0].geometry.coordinates;
+                    ctrl.flyTos(center);
+                }
+            })
+        },
+        on: function () {
+            $('.btn_sw').on('click', function () {
+                ctrl.swicthCity(this.id)
+            });
+        },
+        flyTos: function (center) {
+            var city_center = {
+                '708': [126.66932038252615, 45.75026603669948],
+                '1009': [120.16, 30.28],
+                '1122': [117.19815673844118,31.791388029752923],
+            };
+            center = city_center[''+this.cityId]?city_center[''+this.cityId]:center;
+            app.map.setCenter(center);
+            app.map.setZoom(16);
+            // app.map.flyTo({
+            //     center: center,
+            //     zoom: 16,
+            //     bearing: 0,
+            //     speed: 1, // make the flying slow
+            //     curve: 1, // change the speed at which it zooms out
+            //     easing: function (t) { return t; }
+            // });
+        }
+    }
+    ctrl.on();
+</script>
+</body>
+</html>

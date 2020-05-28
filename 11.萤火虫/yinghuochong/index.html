@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>萤火虫</title>
+    <link rel="stylesheet" href="ol4.6.5/ol.css">
+    <link rel="stylesheet" href="citySelect/citySelect/common.css">
+    <script type="text/javascript" src="ol4.6.5/ol.js"></script>
+    <script type="text/javascript" src="jquery.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+    <style>
+        body #map {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            background-color: #999999;
+        }
+        .legendContainer {
+            position: absolute;
+            bottom: 10px;
+            right: 25px;
+            color: white;
+            padding: 50px 10px 10px 0px;
+            z-index: 1000;
+            font-size: 15px;
+        }
+
+        .legendHead {
+            align-self: flex-end;
+        }
+
+        .legendBody {
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="map" >
+    <div class="legendContainer whiteBackground">
+        <div class="legendHead _flex">
+            <div id="title" style="color: white">------</div>
+        </div>
+        <div class="legendBody _flex">
+            <svg width="166" height="170" id="legend">
+
+            </svg>
+        </div>
+    </div>
+
+    <div id="citySelect-show" class="suspended-frame">
+        <span>北京市</span>
+        <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+    </div>
+    <div id="citySelectDiv" style="display:none;" class="suspended-frame">
+        <div id="citySelect-title">当前城市：北京市</div>
+        <div id="citySelect-content">
+            <ul id="citySelect-popular">
+                <li name="北京市">北京市</li>
+                <li name="沈阳市">沈阳市</li>
+                <li name="哈尔滨市">哈尔滨市</li>
+                <li name="上海市">上海市</li>
+                <li name="杭州市">杭州市</li>
+                <li name="青岛市">青岛市</li>
+                <li name="武汉市">武汉市</li>
+                <li name="广州市">广州市</li>
+                <li name="深圳市">深圳市</li>
+                <li name="重庆市">重庆市</li>
+                <li name="成都市">成都市</li>
+            </ul>
+            <div id="citySelect-toolbar">
+                <div id="citySelect-province" class="citySelect-btn">按省份</div>
+                <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+                <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+                <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+                </ul>
+                <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+                </ul>
+            </div>
+            <div id="citySelect-list">
+                <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+                </dl>
+                <dl id="citySelect-city-list" class="citySelect-list">
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="citySelect/citySelect/citySelect.js"></script>
+<script type="text/javascript" src="mapInit.js"></script>
+<script type="text/javascript" src="index.js"></script>
+</body>
+</html>

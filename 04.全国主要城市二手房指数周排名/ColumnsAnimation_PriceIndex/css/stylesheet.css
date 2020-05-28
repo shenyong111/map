@@ -1,0 +1,89 @@
+.domain {
+    display: none;
+}
+
+.tick line {
+    stroke: #C0C0BB;
+}
+
+.tick text {
+    fill: #8E8883;
+    font-size: 12pt;
+}
+
+.days {
+    fill: rgb(92, 92, 92);
+    font-weight: bold;
+    font-size: 55pt;
+}
+
+.timer {
+    fill: #686868;
+}
+
+.value {
+    fill: rgb(138, 46, 46);
+    font-size: 10pt;
+    font-weight: 400;
+}
+
+.barInfo {
+    fill: rgb(255, 255, 255);
+    font-size: 12pt;
+    /*font-weight: 800;*/
+}
+.barInfo_1 {
+    fill: rgb(255, 255, 255);
+    font-size: 8pt;
+    /*font-weight: 800;*/
+    /*display: none;*/
+}
+.leftText{
+    font-size: 14px;
+    fill: rgb(0, 0, 0);
+}
+.I {
+    fill: #7542D0;
+}
+.H {
+    fill: #009735;
+}
+.G {
+    fill: #DC4747;
+}
+.F {
+    fill: #006BC5;
+}
+
+.E {
+    fill: #82AF00;
+}
+
+.D {
+    fill: #D88E00;
+}
+
+.C {
+    fill: #00959A;
+}
+
+.B {
+    fill: #C2AE00;
+}
+
+.A {
+    fill: #3D3FED;
+}
+.W{
+    fill: #000000;
+}
+#animation{
+
+}
+.title{
+    margin:0 auto;
+    /*width:500px;*/
+    max-width: 1000px;
+    font-size: 30px;
+    text-align: center;
+}

@@ -1,0 +1,637 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>图层编辑</title>
+    <script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+    <script type="text/javascript" src="js/vue.min.js"></script>
+    <link rel="stylesheet" href="http://gisapi.cindata.cn/project/xinbao/drawLayer/js/iview/styles/iview.css" type="text/css">
+    <script type="text/javascript" src="http://gisapi.cindata.cn/project/xinbao/drawLayer/js/iview/iview.min.js"></script>
+    <link rel="stylesheet" href="https://openlayers.org/en/v4.6.5/css/ol.css" type="text/css">
+    <script src="https://openlayers.org/en/v4.6.5/build/ol.js"></script>
+    <link rel="stylesheet" href="js/citySelect/citySelect/common.css">
+    <!--<script type="text/javascript" src="js/citySelect/citySelect/citySelect.js"></script>-->
+    <!--<link rel="stylesheet"  href="http://gisapi.cindata.cn/project/citySelect/common.css">-->
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+    <script type="text/javascript" src="http://gisapi.cindata.cn/project/citySelect/citySelect.js" ></script>
+    <script type="text/javascript" src="js/olMap.js"></script>
+    <script type="text/javascript" src="js/olStyle.js"></script>
+</head>
+<body>
+<div id='app'>
+    <div id='map'></div>
+    <div id='tools'>
+        <div v-for="(item,index) in tools" :class="{active:item.isActive}" @click="toolClick(item)">
+            <img :src='"img/svg/"+item.srcName+".svg"'/>
+            <label>{{item.name}}</label>
+        </div>
+    </div>
+    <div id='featureInfo' v-show="featureInfo.isDoingEdit">
+        <div class="info" v-if="featureInfo.featureSelected">
+            <div class="editName" v-for="(value, key) in featureInfo.properties" v-show="value.isShow">
+                <div>{{status=="删除"?"名称":"编辑名称"}}</div>
+                <input type="text" v-model="value.value" :disabled="!value.isEdit"/>
+            </div>
+            <div class="button-green" @click="submitClick()">{{featureInfo.buttonName}}</div>
+            <div class="button-common" @click="exit()">取消</div>
+        </div>
+        <div class="tip"  v-else>
+            <div class="select" v-show="status=='新增'">
+                <label>选择绘图方式：</label>
+                <div>
+                    <div :class="{active:draw.isDrawSquare}" @click="changeDrawWay(true)"><img :src='"img/svg/"+draw.drawSquareSrcName+".svg"'/></div>
+                    <div :class="{active:!draw.isDrawSquare}" @click="changeDrawWay(false)"><img :src='"img/svg/"+draw.drawPenSrcName+".svg"'></div>
+                </div>
+            </div>
+            <label>提示：</label>
+            <label>{{featureInfo.loadMessage}}</label>
+            <div class="button-common" @click="exit()">{{"退出"+status}}</div>
+        </div>
+    </div>
+</div>
+<div id="citySelect-show" class="suspended-frame">
+    <span>北京市</span>
+    <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+</div>
+<div id="citySelectDiv" style="display:none;" class="suspended-frame">
+    <div id="citySelect-title">当前城市：北京市</div>
+    <div id="citySelect-content">
+        <ul id="citySelect-popular">
+            <li name="北京市">北京市</li>
+            <li name="沈阳市">沈阳市</li>
+            <li name="哈尔滨市">哈尔滨市</li>
+            <li name="上海市">上海市</li>
+            <li name="杭州市">杭州市</li>
+            <li name="青岛市">青岛市</li>
+            <li name="武汉市">武汉市</li>
+            <li name="广州市">广州市</li>
+            <li name="深圳市">深圳市</li>
+            <li name="重庆市">重庆市</li>
+            <li name="成都市">成都市</li>
+        </ul>
+        <div id="citySelect-toolbar">
+            <div id="citySelect-province" class="citySelect-btn">按省份</div>
+            <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+            <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+            <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+            </ul>
+            <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+            </ul>
+        </div>
+        <div id="citySelect-list">
+            <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+            </dl>
+            <dl id="citySelect-city-list" class="citySelect-list">
+            </dl>
+        </div>
+    </div>
+</div>
+<style>
+    html, body {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+        background-color: #f5f5f5;
+        font-size:14px;
+        font-family:PingFangSC-Regular;
+        font-weight:400;
+        color:rgba(102,102,102,1);
+    }
+    #app,
+    #map{
+        width:100%;
+        height:100%;
+    }
+    .ol-zoom {
+        top: unset;
+        left: unset;
+        bottom: .5em;
+        right: .5em;
+    }
+    .ol-attribution.ol-uncollapsible{
+        display: none;
+    }
+    .button-common{
+        background:rgba(235,237,240,1);
+        border-radius:3px;
+        border:1px solid rgba(219,219,219,1);
+        text-align: center;
+        height:28px;
+        line-height: 28px;
+        color:#444444;
+        cursor:pointer;
+    }
+    .button-green{
+        background:rgba(19,150,25,1);
+        border-radius:3px;
+        border:1px solid rgba(19,150,25,1);
+        text-align: center;
+        height:28px;
+        line-height: 28px;
+        color:rgba(255,255,255,1);
+        cursor:pointer;
+    }
+    #tools{
+        position:absolute;
+        top:20px;
+        right:20px;
+        background-color: rgba(255,255,255,1);
+        border: 1px solid #ccc;
+        box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.2);
+        border-radius: 3px;
+        height:36px;
+        line-height: 36px;
+    }
+    #tools>div{
+        display: inline-block;
+        width:85px;
+        height:20px;
+        line-height: 20px;
+        text-align: center;
+        margin-top: 8px;
+        border-right: 2px solid rgba(219,219,219,1);
+        cursor: pointer;
+    }
+    #tools>div>img{
+        margin-top: 2px;
+    }
+    #tools>div>div{
+        display: inline-block;
+        vertical-align: middle;
+        width:16px;
+        height:16px;
+        background-image: url("img/svg/add.svg");
+    }
+    #tools>div>label{
+        display: inline-block;
+        vertical-align: middle;
+        cursor: pointer;
+    }
+    #tools>div:nth-child(3){
+        border-right: none;
+    }
+    #tools>div.active{
+        color:#0F9415;
+    }
+    #tools>div.active>img{
+
+    }
+
+    #tools>div.disabled{
+        background-color: rgb(235, 235, 228);
+        cursor: no-drop;
+    }
+    #featureInfo{
+        position:absolute;
+        right: 20px;
+        top: 60px;
+        width: 261px;
+        /*height: 107px;*/
+        background: rgba(255,255,255,1);
+        box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.2);
+        border-radius: 3px;
+    }
+    #featureInfo>div{
+        padding: 15px 12px 12px 16px;
+    }
+    #featureInfo>.info>.button-common{
+        float:right;
+        width: 80px;
+        margin-bottom:12px;
+        margin-top: 12px;
+        margin-right: 12px;
+    }
+    #featureInfo>.info>.button-green{
+        float:right;
+        width: 80px;
+        margin-bottom:12px;
+        margin-top: 12px;
+    }
+    #featureInfo .editName>div{
+        color:rgba(68,68,68,1);
+    }
+    #featureInfo .editName>input{
+        border-radius:3px;
+        border:1px solid rgba(219,219,219,1);
+        width:225px;
+        height:32px;
+        padding-left: 10px;
+        width: 100%;
+        margin-top: 6px;
+    }
+    #featureInfo .editName>input:focus{
+        border:1px solid #63b2f5;
+    }
+    #featureInfo span{
+        display: inline-block;
+        height: 30px;
+        line-height: 30px;
+        width: 40px;
+        text-align: right;
+        padding-right: 10px;
+    }
+    #featureInfo input.notEdit{
+        ime-mode: disabled
+    }
+    /*提示信息*/
+    #featureInfo>.tip>.select{
+        margin-bottom: 10px;
+    }
+    #featureInfo>.tip>.select>label{
+        color: #000000;
+    }
+    #featureInfo>.tip>.select>div{
+        display: inline-block;
+        vertical-align: middle;
+        height: 32px;
+        background: rgba(255,255,255,1);
+        line-height: 32px;
+    }
+    #featureInfo>.tip>.select>div>div{
+        cursor: pointer;
+        width: 42px;
+        text-align: center;
+        height: 32px;
+        float: left;
+        padding-top: 8;
+        border: 1px solid rgba(235,237,240,1);
+    }
+    #featureInfo>.tip>.select>div>div.active{
+        background: rgba(229,243,229,1);
+    }
+    #featureInfo>.tip>.select>div>div:nth-child(1){
+        border-radius: 3px 0px 0px 3px;
+    }
+    #featureInfo>.tip>.select>div>div:nth-child(2){
+        border-radius: 0px 3px 3px 0px;
+    }
+    #featureInfo>.tip>label:nth-child(3){
+        color: #999999;
+    }
+    #featureInfo>.tip>label:nth-child(2){
+        color: #000000;
+    }
+    #featureInfo>.tip>.button-common{
+        float:right;
+        width: 80px;
+        margin-bottom:12px;
+        margin-top:24px;
+    }
+    #citySelect-show{
+        right:283px;
+        /*width: 80px;*/
+        height: 36px;
+        line-height: 36px;
+        background: rgba(255,255,255,1);
+        box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.2);
+        border-radius: 3px;
+        border: 1px solid rgba(235,237,240,1);
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            areaInfo: {
+                name: '北京市',
+                level: 2,
+                other: {
+                    properties: {
+                        avg_price: 66005
+                    }
+                }
+            },
+            keyCode: null,
+            status:'取消',
+            tools:[
+                {name:'新增',isActive:false,isDisabled:false,srcName:"add"},
+                {name:'修改',isActive:false,isDisabled:false,srcName:"edit"},
+                {name:'删除',isActive:false,isDisabled:false,srcName:"delete"},
+                // {name:'取消',isActive:false,isDisabled:false},
+            ],
+            featureInfo:{
+                isDoingEdit: false,
+                featureSelected:false,
+                properties:{
+                    id:{value:'111',showName:'编号',isEdit:false,isShow:false},
+                    name:{value:'222',showName:'名称',isEdit:true,isShow:true},
+                },
+                feature:null,
+                buttonName: '保存',
+                loadMessage:'',
+            },
+            draw:{
+                isDrawSquare: true,
+                drawSquareSrcName:"drawSquare-active",
+                drawPenSrcName:"drawPen"
+            }
+
+        },
+        created: function () {
+            this.keyCode = getQueryString('keyCode');
+        },
+        methods: {
+            toolClick: function (item) {
+                if(item.isActive)return;
+                olMap.exitDraw();
+                olMap.exitModify();
+                olMap.exitSelect();
+                this.status = item.name;
+                this.featureInfo.featureSelected = false;
+                this.featureInfo.isDoingEdit = false;
+                for(var i=0;i<this.tools.length;i++){
+                    this.tools[i].srcName = this.tools[i].srcName.split('-')[0];
+                    if(item.name == this.tools[i].name){
+                        this.tools[i].isActive = true;
+                        this.tools[i].srcName = this.tools[i].srcName+'-active';
+                    }else{
+                        this.tools[i].isActive = false;
+                    }
+                }
+                switch(item.name){
+                    case '新增':
+                        this.featureInfo.loadMessage = '鼠标单击地图开始绘制，双击完成绘制！';
+                        this.featureInfo.isDoingEdit = true;
+                        olMap.startDraw(drawend);
+                        break;
+                    case '修改':
+                        this.featureInfo.loadMessage = '鼠标点击地图选择要修改的要素！';
+                        this.featureInfo.isDoingEdit = true;
+                        olMap.startModify(modify);
+                        break;
+                    case '删除':
+                        this.featureInfo.loadMessage = '鼠标点击地图选择要删除的要素！';
+                        this.featureInfo.isDoingEdit = true;
+                        olMap.startSelect(selected);
+                        break;
+                    case '取消':
+                        this.featureInfo.isDoingEdit = false;
+                        olMap.exitDraw();
+                        olMap.exitModify();
+                        olMap.exitSelect();
+                        break;
+                }
+            },
+            exit: function () {
+                for(var i=0;i<this.tools.length;i++){
+                    this.tools[i].isActive = false;
+                    this.tools[i].srcName = this.tools[i].srcName.split('-')[0];
+                }
+                this.featureInfo.isDoingEdit = false;
+                olMap.exitDraw();
+                olMap.exitModify();
+                olMap.exitSelect();
+                // olMap.addLayer_gr_area_2301();//测试
+                olMap.addLayer_gr_area_own_define();//生产
+            },
+            submitClick:function () {
+                if(!app.featureInfo.properties.name.value){
+                    app.$Message.warning({
+                        content: '保存失败：名称不能为空!',
+                        duration: 3,
+                        closable:true,
+                    });
+                    $('#featureInfo .editName input').eq(1).focus();//not that vue,but I donot have better solution!
+                    return;
+                }
+                switch(this.status) {
+                    case '新增':
+                        doWfs([olMap.drawFeature],null,null);
+                        break;
+                    case '修改':
+                        if(olMap.modifyFeature){
+                            doWfs(null,[olMap.modifyFeature],null);
+                        }else{
+                            doWfs(null,[app.featureInfo.feature],null);
+                        }
+                        break;
+                    case '删除':
+                        doWfs(null,null,[olMap.selectFeature]);
+                        break;
+                }
+                this.toolClick('取消');
+            },
+            changeDrawWay:function (isDrawSquare) {
+                if(isDrawSquare == this.isDrawSquare)return;
+                this.draw.isDrawSquare = !this.draw.isDrawSquare;
+                if(isDrawSquare){
+                    this.draw.drawSquareSrcName = "drawSquare-active";
+                    this.draw.drawPenSrcName = "drawPen";
+                    olMap.initDraw(false);
+                    olMap.startDraw(drawend);
+                    this.featureInfo.loadMessage = '鼠标单击地图开始绘制，双击完成绘制！';
+                }else{
+                    this.draw.drawSquareSrcName = "drawSquare";
+                    this.draw.drawPenSrcName = "drawPen-active";
+                    olMap.initDraw(true);
+                    olMap.startDraw(drawend);
+                    this.featureInfo.loadMessage = '按住鼠标左键，拖动鼠标开始绘制，松开鼠标左键完成绘制！';
+                }
+            }
+        },
+        watch: {
+            // 如果 `areaInfo` 发生改变，这个函数就会运行
+            areaInfo: function (newAreaInfo, oldAreaInfo) {
+            }
+        },
+    });
+    initMap();
+    function initMap() {
+        olMap.initMap('map');
+        olMap.initBaseLayer();
+        // olMap.addLayer_gr_area_2301();//测试
+        olMap.addLayer_gr_area_own_define();//生产
+        olMap.initDraw();
+        olMap.initSelect();
+        olMap.initModify();
+    }
+    function drawend() {
+        var feature = olMap.drawFeature;
+        app.featureInfo.feature = feature.clone();
+        app.featureInfo.featureSelected = true;
+        app.featureInfo.properties.id.value = '保存时自动生成！';
+        app.featureInfo.properties.id.isEdit = false;
+        app.featureInfo.properties.name.value = '';
+        app.featureInfo.properties.name.isEdit = true;
+        app.featureInfo.buttonName = '保存';
+    }
+    function modify(isFeatureSelected) {
+        if(!isFeatureSelected){
+            app.featureInfo.featureSelected = false;
+            return;
+        }
+        var feature = olMap.selectFeature;
+        app.featureInfo.feature = feature.clone();
+        app.featureInfo.featureSelected = true;
+        app.featureInfo.properties.id.value = feature.getId();
+        app.featureInfo.properties.id.isEdit = false;
+        app.featureInfo.properties.name.value =feature.getProperties().name;
+        app.featureInfo.properties.name.isEdit = true;
+        app.featureInfo.buttonName = '保存修改';
+    }
+    function selected(isFeatureSelected) {
+        if(!isFeatureSelected){
+            app.featureInfo.featureSelected = false;
+            return;
+        }
+        var feature = olMap.selectFeature;
+        app.featureInfo.feature = feature.clone();
+        app.featureInfo.featureSelected = true;
+        app.featureInfo.properties.id.value = feature.getId();
+        app.featureInfo.properties.id.isEdit = false;
+        app.featureInfo.properties.name.value =feature.getProperties().name;
+        app.featureInfo.properties.name.isEdit = false;
+        app.featureInfo.buttonName = '确认删除';
+    }
+    function doWfs(addFeatures,updateFeatures,deleteFeatures) {
+        var newAddFeatures = [];
+        var newUpdateFeatures = [];
+        var newDeleteFeatures = [];
+        if(addFeatures){
+            for(var i=0;i<addFeatures.length;i++){
+                var newFeature =  new ol.Feature();
+                var geometry = addFeatures[i].getGeometry().clone();
+                var area = geometry.getArea();
+                geometry.transform('EPSG:3857','EPSG:4326');
+                geometry.applyTransform(function(flatCoordinates, flatCoordinates2, stride) {
+                    for (var j = 0; j < flatCoordinates.length; j += stride) {
+                        var y = flatCoordinates[j];
+                        var x = flatCoordinates[j + 1];
+                        flatCoordinates[j] = x;
+                        flatCoordinates[j + 1] = y;
+                    }
+                });
+                // MultiPolygon
+                newFeature.setGeometryName('shape');
+                newFeature.setGeometry(new ol.geom.MultiPolygon([geometry.getCoordinates()]));
+                newFeature.set('name', app.featureInfo.properties.name.value);
+                newFeature.set('parent_area', Math.floor(area/1000000));
+                newFeature.set('keycode', app.keyCode);
+                newAddFeatures.push(newFeature);
+            }
+        }
+        if(updateFeatures){
+            for(var i=0;i<updateFeatures.length;i++){
+                var newFeature =  updateFeatures[i].clone();
+                var geometry = newFeature.getGeometry();
+                var area = geometry.getArea();
+                geometry.transform('EPSG:3857','EPSG:4326');
+                geometry.applyTransform(function(flatCoordinates, flatCoordinates2, stride) {
+                    for (var j = 0; j < flatCoordinates.length; j += stride) {
+                        var y = flatCoordinates[j];
+                        var x = flatCoordinates[j + 1];
+                        flatCoordinates[j] = x;
+                        flatCoordinates[j + 1] = y;
+                    }
+                });
+                // MultiPolygon
+                newFeature.setGeometryName('shape');
+                newFeature.setId(app.featureInfo.properties.id.value);
+                newFeature.set('name', app.featureInfo.properties.name.value);
+                newFeature.set('parent_area', Math.floor(area/1000000));
+                newUpdateFeatures.push(newFeature);
+            }
+        }
+        if(deleteFeatures){
+            for(var i=0;i<deleteFeatures.length;i++){
+                var newFeature =  new ol.Feature();
+                var geometry = deleteFeatures[i].getGeometry().clone();
+                geometry.transform('EPSG:3857','EPSG:4326');
+                geometry.applyTransform(function(flatCoordinates, flatCoordinates2, stride) {
+                    for (var j = 0; j < flatCoordinates.length; j += stride) {
+                        var y = flatCoordinates[j];
+                        var x = flatCoordinates[j + 1];
+                        flatCoordinates[j] = x;
+                        flatCoordinates[j + 1] = y;
+                    }
+                });
+                // MultiPolygon
+                newFeature.setGeometryName('shape');
+                newFeature.setGeometry(new ol.geom.MultiPolygon([geometry.getCoordinates()]));
+                newFeature.setId(app.featureInfo.properties.id.value);
+                newDeleteFeatures.push(newFeature);
+            }
+        }
+        newAddFeatures = newAddFeatures.length>0?newAddFeatures:null;
+        newUpdateFeatures = newUpdateFeatures.length>0?newUpdateFeatures:null
+        newDeleteFeatures = newDeleteFeatures.length>0?newDeleteFeatures:null
+        var WFSTSerializer = new ol.format.WFS();
+        var featObject = WFSTSerializer.writeTransaction(newAddFeatures,
+            newUpdateFeatures,  newDeleteFeatures, {
+                //测试
+                // featureType: 'gr_area_2301',
+                // featureNS: 'http://www.opengeospatial.net/gxd_develop',
+                //生产
+                featureType: 'gr_area_own_define',
+                featureNS: 'http://www.opengeospatial.net/gxd',
+                srsName: 'EPSG:4326'
+            });
+        var serializer = new XMLSerializer();
+        var featString = serializer.serializeToString(featObject);
+        var request = new XMLHttpRequest();
+        request.open('POST', 'http://geoserver.cindata.cn/geoserver/wfs?service=wfs');
+        request.setRequestHeader('Content-Type', 'text/xml');
+        request.onreadystatechange = function (data) {
+            if (request.readyState == 4 && request.status == 200) {
+                // olMap.addLayer_gr_area_2301();//测试
+                olMap.addLayer_gr_area_own_define();//生产
+            }
+        };
+        request.send(featString);
+    }
+    //获取请求参数
+    function getQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return decodeURI(r[2]);
+        return null;
+    }
+</script>
+<script>
+    function citySelectCallback(area,result){
+        debugger
+        var range = eval("(" + result.range + ")");
+        var center = ol.proj.transform([(range.xmin+range.xmax)/2,(range.ymin+range.ymax)/2],"EPSG:3857","EPSG:4326");
+        ctrl.flyTos(center);
+    }
+    var ctrl = {
+        area: null,
+        cityId: 2,
+        swicthCity: function (area) {
+            this.area = area;
+            this.cityId = area.areaId;
+            var filter =
+                '&filter=' +
+                '<PropertyIsEqualTo>' +
+                '<PropertyName>city_id</PropertyName>' +
+                '<Literal>' + this.cityId + '</Literal>' +
+                '</PropertyIsEqualTo>'
+            var url = 'http://geoserver.cindata.cn/geoserver/cim/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=cim:gp_city'
+                + filter +
+                '&maxFeatures=100&outputFormat=application%2Fjson'
+            $.ajax({
+                url: url,
+                type: 'get',
+                async: false,
+                success: function (data) {
+                    var center = data.features[0].geometry.coordinates;
+                    ctrl.flyTos(center);
+                }
+            })
+        },
+        on: function () {
+            $('.btn_sw').on('click', function () {
+                ctrl.swicthCity(this.id)
+            });
+        },
+        flyTos: function (center) {
+            olMap.flyTo(center,function() {});
+        }
+    }
+    ctrl.on();
+</script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>房价等高线3D</title>
+    <meta name="description" content="房价等高线3D">
+    <script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+    <script type="text/javascript" src="hammer.js"></script>
+
+    <link rel="stylesheet"  href="http://gisapi.cindata.cn/project/citySelect/common.css">
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+    <script type="text/javascript" src="http://gisapi.cindata.cn/project/citySelect/citySelect.js" ></script>
+
+    <link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/css/main.css">
+    <script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+
+    <script type="text/javascript" src="index.js"></script>
+    <style>
+        html, body, #viewDiv {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        input {
+            vertical-align: text-bottom;
+            margin-bottom: 2px;
+            *margin-bottom: -2px;  //兼容IE6，IE7
+        }
+
+        #infoDiv {
+            width: 200px;
+            height: auto;
+            max-height: 600px;
+            /*padding: 10px;*/
+            background-color: rgba(230, 230, 230, 0.8);
+            border: darkgray 1px;
+            border-radius: 2px;
+            overflow: auto;
+            font-size: 11px;
+        }
+        #infoDiv p {
+            margin: 3px 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        #infoDiv ol{
+            margin: 5px;
+        }
+
+        /**
+        * Hover tooltip
+        */
+
+        .tooltip {
+            position: absolute;
+            pointer-events: none;
+            transition: opacity 200ms;
+        }
+
+        .tooltip > div {
+            margin: 0 auto;
+            padding: 5px 15px;
+            border-radius: 2px;
+            /*box-shadow: 0px 0px 4px rgba(255, 255, 255, 0.75);*/
+            transform: translate3d(-50%, -125%, 0);
+            background-color: white;
+            font-size: 9pt;
+        }
+        #compass{
+            position: absolute;
+            left: 15px;
+            bottom: 30px;
+            align-items: center;
+            background-color: rgb(255, 255, 255);
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+             box-sizing: border-box;
+            color: rgb(110, 110, 110);
+            cursor: pointer;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            font-family: "Avenir Next W00", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 20px;
+            height: 32px;
+            justify-content: center;
+            line-height: 18.2px;
+            margin: 0px;
+            overflow: hidden;
+            padding: 0px;
+            text-align: center;
+            transition-delay: 0s;
+            transition-duration: 0.125s;
+            transition-property: background-color;
+            transition-timing-function: ease-in-out;
+            width: 32px;
+        }
+        #compass>.esri-icon-compass{
+            font-size: 20px;
+        }
+        #compass:hover{
+            background-color: #f0f0f0;
+        }
+        /*#citySelect-show{*/
+            /*top: 140px;*/
+        /*}*/
+        /*#citySelectDiv{*/
+            /*top: 140px;*/
+        /*}*/
+    </style>
+</head>
+<body>
+<script>
+    var esri = {};
+    require(["esri/Map",
+        "esri/Basemap",
+        "esri/views/SceneView",
+        "esri/Graphic",
+        "esri/geometry/Extent",
+        "esri/layers/MapImageLayer",
+        "esri/layers/GraphicsLayer",
+        "esri/layers/support/TileInfo",
+        "esri/core/watchUtils",
+        "esri/layers/FeatureLayer",
+        "esri/tasks/QueryTask",
+        "esri/tasks/support/Query"
+    ], function (Map, Basemap, SceneView, Graphic, Extent, MapImageLayer,
+                 GraphicsLayer, TileInfo, watchUtils, FeatureLayer, QueryTask, Query) {
+        esri.Map = Map;
+        esri.Basemap = Basemap;
+        esri.views = {};
+        esri.views.SceneView = SceneView;
+        esri.Graphic = Graphic;
+        esri.geometry = {};
+        esri.geometry.Extent = Extent;
+        esri.layers = {};
+        esri.layers.MapImageLayer = MapImageLayer;
+        esri.layers.GraphicsLayer = GraphicsLayer;
+        esri.layers.FeatureLayer = FeatureLayer;
+        esri.layers.support = {};
+        esri.layers.support.TileInfo = TileInfo;
+        esri.core = {};
+        esri.core.watchUtils = watchUtils;
+        esri.extend = {};
+        esri.tasks = {};
+        esri.tasks.QueryTask = QueryTask;
+        esri.tasks.Query = Query;
+
+        init();
+    });
+</script>
+<div id="viewDiv">
+    <div id="infoDiv"></div>
+    <div id="compass" role="button" title="重置罗盘仪方向">
+        <span aria-hidden="true" class="esri-icon-compass" style="transform: rotateZ(0deg);"></span>
+        <span class="esri-icon-font-fallback-text">重置罗盘仪方向</span>
+    </div>
+</div>
+
+<div id="citySelect-show" class="suspended-frame">
+    <span>哈尔滨市</span>
+    <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+</div>
+
+<div id="citySelectDiv" style="display:none;" class="suspended-frame">
+    <div id="citySelect-title">当前城市：哈尔滨市</div>
+    <div id="citySelect-content">
+        <ul id="citySelect-popular">
+            <li name="北京市">北京市</li>
+            <li name="沈阳市">沈阳市</li>
+            <li name="哈尔滨市">哈尔滨市</li>
+            <li name="上海市">上海市</li>
+            <li name="杭州市">杭州市</li>
+            <li name="青岛市">青岛市</li>
+            <li name="武汉市">武汉市</li>
+            <li name="广州市">广州市</li>
+            <li name="深圳市">深圳市</li>
+            <li name="重庆市">重庆市</li>
+            <li name="成都市">成都市</li>
+        </ul>
+        <div id="citySelect-toolbar">
+            <div id="citySelect-province" class="citySelect-btn">按省份</div>
+            <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+            <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+            <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+            </ul>
+            <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+            </ul>
+        </div>
+        <div id="citySelect-list">
+            <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+            </dl>
+            <dl id="citySelect-city-list" class="citySelect-list">
+            </dl>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

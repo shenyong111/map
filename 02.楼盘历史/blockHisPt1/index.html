@@ -1,0 +1,685 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link href="css/c3.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+    <div id='app' style="">
+        <audio  src="data/music.mp3" id="myAuto" controls="controls" loop="false" hidden="true" ></audio>
+        <div id='map'></div>
+        <div id="dataPanel">
+            <div id="chart"></div>
+            <template>
+                <div id="yearButtons">
+                    <button v-for="(item,index) in periodYear"
+                            @click="periodYearClick(item)"
+                            :class="item.isActived? 'actived' :''"
+                            :style="{'background-color':item.isActived?colors[index]:''}">
+                        <div style="float:left;padding-left: 50%;margin-left: -55px;">{{ item.startYear + ' - ' + item.endYear }}</div>
+                        <div style="float:right;margin-top:2px;height:18px;width: 55px;line-height: 18px;background:rgba(255,255,255,1);border-radius:12px;font-weight:500;color:rgba(102,02,102,1);text-align: left;">
+                            <div :style="{'background-color':item.isActived?colors[index]:'rgba(102,102,102,1)'}" style="float:left;margin-top: 6px;margin-left: 8px;margin-right:6px;width:6px;height:6px;border-radius:6px;"></div>
+                            {{item.totle}}
+                        </div>
+                    </button>
+                </div>
+                <div id="controlButtons">
+                    <img @click="playClick" :src="playStatus?'data/pause.png':'data/play.png'" />
+                    <label @click="curYearClick">{{ curYear + '年：'+curCity+'建成小区'+ (allData[curYear-startYear+1]>0?allData[curYear-startYear+1]:'？')+'个' }}</label>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div id="citySelect-show" class="suspended-frame">
+        <span>北京市</span>
+        <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+    </div>
+    <div id="citySelectDiv" style="display:none;" class="suspended-frame">
+        <div id="citySelect-title">当前城市：北京市</div>
+        <div id="citySelect-content">
+            <ul id="citySelect-popular">
+                <li name="北京市">北京市</li>
+                <li name="沈阳市">沈阳市</li>
+                <li name="哈尔滨市">哈尔滨市</li>
+                <li name="上海市">上海市</li>
+                <li name="杭州市">杭州市</li>
+                <li name="青岛市">青岛市</li>
+                <li name="武汉市">武汉市</li>
+                <li name="广州市">广州市</li>
+                <li name="深圳市">深圳市</li>
+                <li name="重庆市">重庆市</li>
+                <li name="成都市">成都市</li>
+            </ul>
+            <div id="citySelect-toolbar">
+                <div id="citySelect-province" class="citySelect-btn">按省份</div>
+                <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+                <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+                <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+                </ul>
+                <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+                </ul>
+            </div>
+            <div id="citySelect-list">
+                <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+                </dl>
+                <dl id="citySelect-city-list" class="citySelect-list">
+                </dl>
+            </div>
+        </div>
+    </div>
+
+<script src="https://d3js.org/d3.v5.min.js" charset="utf-8"></script>
+<script src="js/c3.min.js"></script>
+<script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+<script src="https://unpkg.com/vue/dist/vue.js"></script>
+<link rel='stylesheet' href='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.css'/>
+<script src='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.js'></script>
+<link rel="stylesheet" href="js/citySelect/citySelect/common.css">
+<script type="text/javascript" src="js/citySelect/citySelect/citySelect.js"></script>
+<style>
+    html, body {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+        font-size:14px;
+        font-family:PingFangSC-Medium;
+        font-weight:500;
+    }
+    #yearButtons button,
+    #controlButtons button {
+        cursor: pointer;
+        /*border-radius: 8px;*/
+        height: 24px;
+        /*box-shadow: 2px 2px #aaaaaa;*/
+        /*border: 1px solid #9e9e9e;*/
+        border: none;
+        line-height: 24px;
+    }
+    #map{
+        position:absolute;
+        left:0px;
+        top:0px;
+        width: 100%;
+        height: 100%;
+        background-color: #000000;
+    }
+    #dataPanel{
+        position:absolute;
+        left:0px;
+        bottom:0px;
+        width: 100%;
+        min-height: 80px;
+        /*height:200px;*/
+        /*background-color: #FFFFFF;*/
+        /*background-color: rgba(255,255,255,0.7);*/
+        background-color:rgba(0,0,0,0.7);
+        box-shadow: 1px 1px 5px 0 rgba(100,100,100,0.75);
+        transition: all 1s ease 0s;
+    }
+    #chart{
+        height:150px;
+    }
+    #controlButtons{
+        position: absolute;
+        left: 30px;
+        top: 10px;
+    }
+    #controlButtons img {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+    #controlButtons label {
+        font-size:16px;
+        font-family:PingFangSC-Regular;
+        font-weight:400;
+        color:rgba(204,204,204,1);
+        height: 24px;
+        line-height: 24px;
+        margin-left: 5px;
+        cursor: pointer;
+    }
+    #yearButtons{
+        position: absolute;
+        left: 30px;
+        bottom: 10px;
+        /*right:30px;*/
+        width:100%;
+        /*text-align: right;*/
+    }
+    #yearButtons button{
+        width:calc((100% - 91px)/7);
+        background-color: rgba(102,102,102,1);
+        color: whitesmoke;
+        margin-right: 5px;
+    }
+    #yearButtons .actived{
+        color: #FFFFFF;
+    }
+    /* 隐藏x轴文字 */
+    .c3-axis-x .tick text{
+        display: none !important;
+    }
+    /* 隐藏y分类标签 */
+    .c3-legend-item{
+        display: none;
+    }
+    /* xy轴的颜色设置 */
+    .c3 path, .c3 line {
+        stroke: rgba(102,102,102,1) !important;
+    }
+    /* 隐藏y轴 */
+    .c3-axis-y{
+        visibility: hidden !important;
+    }
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            playStatus:false,
+            myAuto:document.getElementById('myAuto'),
+            temptData:[
+                '小区个数',
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+            ],
+            allData:[
+                '小区个数',
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+            ],
+            curData:[
+                '小区个数',
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+            ],
+            cityId:2,
+            curCity:'北京',
+            startYear: 1950,
+            endYear: 2019,
+            curYear : 1950,
+            gap:10,
+            // colors: ['#005DD9','#30A8F0','#00F6F6','#31AD61','#FFB900','#FF4229','#FF00FF'],
+            colors: ['#5000EB','#0063E7','#119EF3','#0BC9C9','#19A350','#DD9F00','#E4290F'],
+            stops:[],
+            isChartOpen: true,
+            chart: null,
+            intervalId: null,
+            intervalGap: 500,
+            periodYear:[
+                {
+                    startYear: 1950,
+                    endYear: 1959,
+                    isActived: true,
+                    totle:0
+                },
+                {
+                    startYear: 1960,
+                    endYear: 1969,
+                    isActived: true,
+                    totle:0
+                },
+                {
+                    startYear: 1970,
+                    endYear: 1979,
+                    isActived: true,
+                    totle:0
+                },
+                {
+                    startYear: 1980,
+                    endYear: 1989,
+                    isActived: true,
+                    totle:0
+                },
+                {
+                    startYear: 1990,
+                    endYear: 1999,
+                    isActived: true,
+                    totle:0
+                },
+                {
+                    startYear: 2000,
+                    endYear: 2009,
+                    isActived: true,
+                    totle:0
+                },
+                {
+                    startYear: 2010,
+                    endYear: 2019,
+                    isActived: true,
+                    totle:0
+                },
+            ]
+        },
+        created: function () {
+
+        },
+        methods: {
+            curYearClick: function (params) {
+                var $chart = $('#chart');
+                this.isChartOpen = !this.isChartOpen;
+                this.isChartOpen?$chart.show():$chart.hide();
+                app.chart.resize();
+            },
+            playClick: function (params) {
+                this.playStatus = !this.playStatus;
+                this.playStatus ? play():pause();
+            },
+            periodYearClick: function (item) {
+                item.isActived = !item.isActived;
+                this.playStatus = false;
+                pause();
+                updateChartByPeriodYear(item);
+                updateMapByPeriodYear();
+            }
+        }
+    });
+    app.allData =  Object.assign([],app.temptData);
+    initAllData(app.startYear,app.endYear);
+    initPeriodYear();
+    initStops();
+    initMap();
+    setTimeout(initChart,2000);
+    function play() {
+        if (app.myAuto.paused)app.myAuto.play();
+        app.intervalId = setInterval(animation,app.intervalGap);
+    }
+    function pause() {
+        if (app.myAuto)app.myAuto.pause();
+        clearInterval(app.intervalId);
+    }
+    function animation() {
+        updateChart();
+        updateMap();
+    }
+    function initChart(){
+        app.chart = c3.generate({
+            padding: {
+                right: 30,
+                left: 30,
+            },
+            data: {
+                // x:'x',
+                type: 'bar',
+                columns: [
+                    app.allData
+                    // ['base年',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    // ['小区个数',1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9]
+                ],
+                color:function(color,d){
+                    var colorIndex = Math.floor(d.index/app.gap);
+                    return  app.colors[colorIndex]?app.colors[colorIndex]: color;
+                },
+                // onclick: function (d, element) { console.log("onclick", d, element); },
+                onmouseover: onmouseover,
+                onmouseout: onmouseout
+            },
+            bar: {
+                width: {
+                    ratio: 0.8,
+                    // max: 30
+                },
+                space: 0.25
+            },
+            axis: {
+                x:{
+                    // label: '建成年份（1950-2019）',
+                    type: 'category',
+                    categories:  [
+                        '1950年','1951年','1952年','1953年','1954年','1955年','1956年','1957年','1958年','1959年',
+                        '1960年','1961年','1962年','1963年','1964年','1965年','1966年','1967年','1968年','1969年',
+                        '1970年','1971年','1972年','1973年','1974年','1975年','1976年','1977年','1978年','1979年',
+                        '1980年','1981年','1982年','1983年','1984年','1985年','1986年','1987年','1988年','1989年',
+                        '1990年','1991年','1992年','1993年','1994年','1995年','1996年','1997年','1998年','1999年',
+                        '2000年','2001年','2002年','2003年','2004年','2005年','2006年','2007年','2008年','2009年',
+                        '2010年','2011年','2012年','2013年','2014年','2015年','2016年','2017年','2018年','2019年',
+                    ]
+                },
+                y: {
+                    label: '小区个数'
+                },
+            }
+        });
+    }
+    function onmouseover (d){
+        var selectYear = app.startYear + d.index;
+        map.setPaintProperty('community', 'circle-stroke-color',{
+            type: 'categorical',
+            property: "buildyear",
+            stops: [
+                [selectYear,'yellow']
+            ],
+            default: 'rgba(0,0,0,0)'
+        });
+        map.setPaintProperty('community', 'circle-stroke-opacity',1);
+        map.setPaintProperty('community', 'circle-stroke-width',2);
+    }
+    function onmouseout (d){
+        var selectYear = app.startYear + d.index;
+        // map.setPaintProperty('community', 'circle-stroke-color',{
+        //     type: 'interval',
+        //     property: "buildyear",
+        //     stops: app.stops,
+        //     default: 'gray'
+        // });
+        map.setPaintProperty('community', 'circle-stroke-color','rgba(0,0,0,0)');
+        map.setPaintProperty('community', 'circle-stroke-opacity',0.7);
+        map.setPaintProperty('community', 'circle-stroke-width',1);
+    }
+
+    function updateChart(){
+        if(app.curYear - app.startYear == app.allData.length - 1)app.curYear = app.startYear;
+        var index = app.curYear-app.startYear+2;
+        app.curData = app.allData.slice(0,index).concat(app.temptData.slice(index));
+        app.chart.load({
+            columns: [
+                app.curData
+            ],
+        });
+        for(var i = 0; i< app.periodYear.length;i++){
+            if(app.curYear >= app.periodYear[i].startYear)
+                app.periodYear[i].isActived = true;
+            else app.periodYear[i].isActived = false;
+        }
+        app.curYear++;
+    }
+    function updateChartByPeriodYear(item){
+        var startIndex = item.startYear - app.startYear+1;
+        var endIndex = item.endYear - app.startYear+1;
+        for(var i = startIndex;i <= endIndex;i++) {
+            if(item.isActived) app.curData[i] = app.allData[i];
+            else  app.curData[i] = app.temptData[i];
+        }
+        app.chart.load({
+            columns: [
+                app.curData
+            ],
+        });
+    }
+    function updateMapByPeriodYear(item){
+        var filter = ['any'];
+        for(var i = 0;i < app.periodYear.length;i++) {
+            if(app.periodYear[i].isActived){
+                filter.push(['all',['>=','buildyear',app.periodYear[i].startYear],['<=','buildyear',app.periodYear[i].endYear]]);
+            }
+        }
+        if(filter.length>1)map.setFilter('community', ['all', ['==','city_id',app.cityId],filter]);
+        else{
+            map.setFilter('community', ['all', false]);
+        }
+    }
+    function updateChartToFullLoad(){
+        app.playStatus = false;
+        pause();
+        app.allData =  Object.assign([],app.temptData);
+        app.curData =  Object.assign([],app.temptData);
+        initAllData(app.startYear,app.endYear);
+        initPeriodYear();
+        app.curYear = app.startYear;
+        app.chart.load({
+            columns: [
+                app.allData
+            ],
+        });
+
+    }
+    function initPeriodYear(){
+        for(var i = 0; i< app.periodYear.length;i++){
+            app.periodYear[i].isActived = true;
+            app.periodYear[i].totle = 0;
+            for(var j = app.periodYear[i].startYear; j<= app.periodYear[i].endYear;j++){
+                app.periodYear[i].totle += app.allData[j-app.startYear+1];
+            }
+        }
+    };
+    function initAllData(startYear,endYear){
+        getCityFeaturesByCityidOnWfs(app.cityId,startYear-1,endYear+1,function(geojson){
+            if(geojson.totalFeatures >= 10000){
+                var midYear = Math.floor((startYear+endYear)/2);
+                initAllData(startYear,midYear);
+                initAllData(midYear+1,endYear);
+            }else{
+                var buildyear;
+                for(var i=0;i<geojson.features.length;i++){
+                    buildyear = geojson.features[i].properties.buildyear;
+                    app.allData[buildyear-app.startYear+1]++;
+                    app.curData[buildyear-app.startYear+1]++;
+                };
+            }
+        });
+    }
+
+    function initStops(){
+        app.stops = [];
+        for(var i = 0;i<app.colors.length;i++){
+            app.stops.push([app.startYear + app.gap * i, app.colors[i]]);
+        }
+    }
+    function initMap(){
+        mapboxgl.accessToken = 'pk.eyJ1Ijoiam5leCIsImEiOiJjamw0a3UyejkwNTl5M3Bqb29oa3AxeTNyIn0.TkW5lUoMnYJW2xJoVGNk3g';
+        var basemapUrl = 'http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaBlack/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
+        // var basemapUrl = "http://lbsapi.cindata.cn/gis/v1/services/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90&mapCode=1_base_map_fe9e51abd96b7a041ab6f883eda91349&keyCode=c99d19fff3334f6480688205e1db9456";
+        var style = {
+            version: 8,
+            glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+            sources: {
+                "ChinaGray": {
+                    "type": "raster",
+                    "tiles": [basemapUrl],
+                    "tileSize": 256
+                },
+            },
+            layers: [{
+                "id": "baseMap",
+                "type": "raster",
+                "source": "ChinaGray"
+            }]
+        };
+        map = new mapboxgl.Map({
+            container: 'map',
+            style: style,
+            minZoom: 0,
+            maxZoom: 24,
+            bearing: 0,
+            pitch: 0,
+            zoom: 9,
+            center: [116.43199130100004, 39.94557711600004],
+            preserveDrawingBuffer: true
+        });
+        map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+        map.on('load', function () {
+            addLayer_community();
+        });
+    }
+
+    function updateMap(){
+        map.setFilter('community', ['all', ['==','city_id',app.cityId],['>=','buildyear',app.startYear], ['<=','buildyear',app.curYear]]);
+    }
+    function addLayer_community() {
+        map.addLayer({
+            id: 'community',
+            type: 'circle',
+            source: {
+                "type": "vector",
+                'scheme': 'tms',
+                'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/gxd:gp_community@EPSG:900913@pbf/{z}/{x}/{y}.pbf"]
+            },
+            "source-layer": "gp_community",
+            filter: ['all', ['==','city_id',app.cityId],['>=','buildyear',app.startYear]],
+            paint: {
+                'circle-radius': 3, //半径
+                'circle-opacity': 1, //不透明度 `0 ~ 1.0`
+                // 'circle-color': 'green',
+                'circle-color': {
+                    type: 'interval',
+                    property: "buildyear",
+                    stops: app.stops,
+                    default: 'gray'
+                }, //填充色
+                'circle-blur': 0,
+                'circle-stroke-width': 1, //轮廓线宽度
+                'circle-stroke-opacity': 0.7, //轮廓线透明度
+                'circle-stroke-color':'rgba(0,0,0,0)',
+                // 'circle-stroke-color':{
+                //     type: 'interval',
+                //     property: "buildyear",
+                //     stops: app.stops,
+                //     default: 'gray'
+                // }, //轮廓线颜色
+            },
+            minzoom: 0,
+            maxzoom: 24,
+        });
+        addPopup('community', ['label','buildyear'], ['小区名称','建成年份'])
+    }
+    //气泡
+    var popup = new mapboxgl.Popup({
+        closeButton: true,
+        closeOnClick: false
+    });
+    //当前选择的要素
+    var featureClicked;
+    //添加气泡
+    function addPopup(layerId, properties, propertienames) {
+        if (featureClicked) {
+            map.off('click', layerId, function (e) {
+            });
+            popup.setHTML(getPopupHtmlByProperties(properties, propertienames))
+        }
+
+        // var properties = ['avg_price','area_cnt','area_id','area_level	','avg_price','building_cnt','city_id	','community_cnt','created_dt','	house_cnt'];
+        map.on('click', layerId, function (e) {
+            featureClicked = e.features[0];
+            var html = getPopupHtmlByProperties(properties, propertienames);
+            popup.setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(map);
+        });
+        // Change the cursor to a pointer when the mouse is over the states layer.
+        map.on('mouseenter', layerId, function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Change it back to a pointer when it leaves.
+        map.on('mouseleave', layerId, function () {
+            map.getCanvas().style.cursor = '';
+        });
+    }
+
+    //获取气泡html
+    function getPopupHtmlByProperties(properties, propertienames) {
+        var maxlength = 30
+        var html = '';
+        if (!properties || properties.length == 0) {
+            properties = [];
+            for (var property in featureClicked.properties) {
+                properties.push(property);
+            }
+        }
+        if (!propertienames) propertienames = properties;
+        for (var index=0; index< properties.length;index++) {
+            var property = properties[index];
+            var propertiename = propertienames[index];
+            var value = featureClicked.properties[properties[index]];
+            if (!propertiename) propertiename = property;
+            if (!value) value = '-';
+            if (value.length > maxlength) value = value.substr(0, maxlength);
+            html += '<div><label>' + propertiename + '：</label><label title="'+ featureClicked.properties[properties[index]]+'">' + value + '</label></div>';
+        }
+        return html;
+    }
+    function getCityFeaturesByCityidOnWfs(cityid,startYear,endYear,success) {
+        $.ajax({
+            type: "post",
+            async: false,
+            url : 'http://geoserver.cindata.cn/geoserver/gxd/ows',
+            // ?service=WFS&version=1.0.0&request=GetFeature&typeName=cim:gr_city_cim&maxFeatures=50&outputFormat=application%2Fjson
+            data : {
+                service:"WFS",
+                version:"1.0.0",
+                request:"GetFeature",
+                typeName:"gp_community",
+                maxFeatures:"10000",
+                outputFormat:"application/json",
+                propertyName:"city_id,buildyear",
+                filter:"<Filter><And>" +
+                    "<PropertyIsEqualTo> <PropertyName>city_id</PropertyName> <Literal>"+cityid+"</Literal> </PropertyIsEqualTo> " +
+                    // "<PropertyIsEqualTo> <PropertyName>buildyear</PropertyName> <Literal>"+app.curYear+"</Literal> </PropertyIsEqualTo> " +
+                     "<PropertyIsGreaterThan> <PropertyName>buildyear</PropertyName> <Literal>"+startYear+"</Literal> </PropertyIsGreaterThan> " +
+                    "<PropertyIsLessThan> <PropertyName>buildyear</PropertyName> <Literal>"+endYear+"</Literal> </PropertyIsLessThan> " +
+                "</And></Filter>"
+            },
+            success : success,
+        });
+    }
+</script>
+    <script>
+        var ctrl = {
+            area: null,
+            cityId: 2,
+            swicthCity: function (area) {
+                this.area = area;
+                this.cityId = area.areaId;
+                app.curCity = area.name;
+                app.cityId = area.areaId;
+                updateChartToFullLoad();
+                map.setFilter('community', ['all', ['==','city_id',app.cityId],['>=','buildyear',app.startYear], ['<=','buildyear',app.endYear]]);
+                var filter =
+                    '&filter=' +
+                    '<PropertyIsEqualTo>' +
+                        '<PropertyName>city_id</PropertyName>' +
+                    '<Literal>' + this.cityId + '</Literal>' +
+                    '</PropertyIsEqualTo>'
+                var url = 'http://geoserver.cindata.cn/geoserver/cim/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=cim:gp_city'
+                    + filter +
+                    '&maxFeatures=100&outputFormat=application%2Fjson'
+                $.ajax({
+                    url: url,
+                    type: 'get',
+                    async: false,
+                    success: function (data) {
+                        var center = data.features[0].geometry.coordinates;
+                        ctrl.flyTos(center);
+                    }
+                })
+            },
+            on: function () {
+                $('.btn_sw').on('click', function () {
+                    ctrl.swicthCity(this.id)
+                });
+            },
+            flyTos: function (center) {
+                map.setCenter(center);
+                map.setZoom(9);
+                // map.flyTo({
+                //     // These options control the ending camera position: centered at
+                //     // the target, at zoom level 9, and north up.
+                //     center: center,
+                //     zoom: 9,
+                //     bearing: 0,
+                //     speed: 1, // make the flying slow
+                //     curve: 1, // change the speed at which it zooms out
+                //     easing: function (t) { return t; }
+                // });
+            }
+        }
+        ctrl.on();
+    </script>
+</body>
+</html>

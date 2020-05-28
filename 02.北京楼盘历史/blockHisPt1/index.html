@@ -1,0 +1,128 @@
+<!--  Copyright 2017 Esri
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+
+   you may not use this file except in compliance with the License.
+
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+
+   distributed under the License is distributed on an "AS IS" BASIS,
+
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+   See the License for the specific language governing permissions and
+
+   limitations under the License.​-->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <title>北京小区历史</title>
+
+  <!-- <link rel="stylesheet" href="https://jsdev.arcgis.com/4.4/esri/css/main.css"> -->
+  <link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/css/main.css">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Load AMD modules: the application itself and D3  -->
+  <script>
+    var dojoConfig = {
+      packages: [{
+        name: "d3",
+        location: location.pathname.replace(/\/[^/]+$/, "") + "/lib",
+        main: "d3"
+      }, {
+        name: "app",
+        location: location.pathname.replace(/\/[^/]+$/, "") + "/app"
+      }],
+      async: true
+    };
+  </script>
+
+  <!-- ArcGIS JavaScript API 4.4  -->
+  <!-- <script src="https://js.arcgis.com/4.4/"></script> -->
+  <script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+
+
+  <!-- load Galleria and JQuery for the image gallery -->
+  <script src="./lib/jquery.js"></script>
+  <script src="./lib/galleria/galleria.js"></script>
+
+  <script>
+    require([
+      "app/Application",
+      "dojo/domReady!"
+    ], function (Application) {
+
+      // general application settings like colors and initial settings
+      var settings = {
+        ageClasses: [
+          { minValue: 1950, maxValue: 1959, color: [0, 93, 217] },
+          { minValue: 1960, maxValue: 1969, color: [48, 168, 240] },
+          { minValue: 1970, maxValue: 1979, color: [0, 246, 246] },
+          { minValue: 1980, maxValue: 1989, color: [49, 173, 97] },
+          { minValue: 1990, maxValue: 1999, color: [255, 185, 0] },
+          { minValue: 2000, maxValue: 2009, color: [255, 66, 41] },
+          { minValue: 2010, maxValue: 2019, color: [255, 0, 255] }
+        ],
+        defaultColor: [230, 230, 230,0 ],
+        highlightOptions: {
+          color: [255, 255, 0, 1],
+          fillOpacity: 0.4
+        },
+        buildingOptions: {
+          minHeight: 0,
+          maxHeight: 5000,
+          minCnstrctYear: 1950,
+          maxCnstrctYear: 2019
+        },
+        initPeriod: [true, false, false, false, false,false, false],
+        categories: [{
+          value: "all",
+          text: "Show all buildings"
+        }, {
+          value: "info",
+          text: "Only annotated buildings"
+        }, {
+          value: "top",
+          text: "Top 20 buildings"
+        }],
+        initCategory: "all",
+        infoPointsUrl: "https://services2.arcgis.com/cFEFS0EWrhfDeVw9/ArcGIS/rest/services/Centroids_Manhattan_Information/FeatureServer/0",
+        buildingsUrl: "https://tiles.arcgis.com/tiles/cFEFS0EWrhfDeVw9/arcgis/rest/services/Buildings_Manhattan/SceneServer"
+      };
+
+      // initialize application
+      var app = new Application(settings);
+      app.init({ view: "viewDiv", timeline: "timeDiv", heightGraph: "heightDiv", categories: "categoryDiv" });
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+  <div id="loading">
+    <p id="loadingInfo">
+      <p>Loading...</p>
+      <img id="loadingImage" src="./img/loading.gif" alt="Loading..." />
+    </p>
+  </div>
+  <div id="headerDiv"> <span class="headerSub"></span></div>
+  <div id="menuDiv">
+    <div id="timeWrap">
+      <div id="heightDiv"></div>
+      <div id="timeDiv"></div>
+      <div id="categoryDiv"></div>
+    </div>
+  </div>
+  <div id="info"></div>
+  <audio  src="data/music.mp3" id="myaudio" controls="controls" loop="false" hidden="true" ></audio>
+</body>
+</html>

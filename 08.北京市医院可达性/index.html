@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>北京医院交通可达性</title>
+    <link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/themes/dark-blue/main.css">
+    <script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+    <script>
+        var dojoConfig = {
+            has: {
+                "esri-featurelayer-webgl": 1
+            }
+        };
+    </script>
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        .esri-ui-corner .esri-component.esri-widget--panel {
+            width: auto;
+        }
+    </style>
+
+    <script>
+        require([
+            "esri/views/MapView",
+            "esri/Map",
+            "esri/layers/FeatureLayer",
+            "esri/layers/TileLayer",
+            "esri/Basemap",
+            "esri/widgets/Legend"
+        ], function (
+            MapView,
+            Map,
+            FeatureLayer,
+            TileLayer,
+            Basemap,
+            Legend
+        ) {
+            var layer_hospital = new FeatureLayer({
+                // url: "http://ypgis.cindata.cn/arcgis/rest/services/kedaxing/MapServer/0",
+                url: "http://tilesvc.cindata.cn/arcgis/rest/services/special_map/kedaxing/MapServer/0",
+                title: "医院",
+                popupTemplate: {
+                    title: "{Name}",
+                    content: [{
+                        type: "fields",
+                        fieldInfos: [{
+                            fieldName: "BdSmallTag",
+                            label: "标签"
+                        }, {
+                            fieldName: "Address",
+                            label: "地址"
+                        }]
+                    }]
+                },
+                legendEnabled: true,
+                definitionExpression: "BdSmallTag Like '%二级医院%' OR BdSmallTag Like '%三级医院%'",
+                outFields: ["*"],
+                labelingInfo: [{
+                    symbol: {
+                        type: "text",
+                        color: "green",
+                        haloColor: "white",
+                        haloSize: 1,
+                        font: {
+                            size: 9,
+                            weight: "bold"
+                        }
+                    },
+                    labelPlacement: "above-center",
+                    labelExpressionInfo: {
+                        expression: "$feature.Name"
+                    },
+                    minScale: 50000
+                }],
+                renderer: {
+                    type: "simple",
+                    symbol: {
+                        type: "simple-marker",
+                        style: "cross",
+                        outline: {
+                            cap: "square",
+                            width: 4,
+                            color: [230, 0, 0, 1]
+                        },
+                        size: 7,
+                        color: [56, 168, 0, 1]
+                    }
+                }
+            });
+
+            var layer_access = new FeatureLayer({
+                // url: "http://ypgis.cindata.cn/arcgis/rest/services/kedaxing/MapServer/1",
+                url: "http://tilesvc.cindata.cn/arcgis/rest/services/special_map/kedaxing/MapServer/1",
+                title: "医院交通可达度",
+                legendEnabled: true,
+                outFields: ["*"],
+                // popupTemplate: {
+                //     title: "{Name}",
+                //     content: [{
+                //         type: "fields",
+                //         fieldInfos: [{
+                //             fieldName: "FromBreak",
+                //             label: "起始"
+                //         }, {
+                //             fieldName: "ToBreak",
+                //             label: "终止"
+                //         }]
+                //     }]
+                // },
+                renderer: {
+                    type: "unique-value",
+                    // defaultSymbol: otherSym,
+                    // defaultLabel: "Other major roads",
+                    field: "ToBreak",
+                    legendOptions: {
+                        title: "驾车时间"
+                    },
+                    uniqueValueInfos: [{
+                        value: "5",
+                        symbol: {
+                            type: "simple-fill",
+                            outline: {
+                                width: 0
+                            },
+                            color: [255, 127, 127, 0.7]
+                        },
+                        label: "0-5分钟"
+                    }, {
+                        value: "10",
+                        symbol: {
+                            type: "simple-fill",
+                            outline: {
+                                width: 0
+                            },
+                            color: [255, 255, 115, 0.7]
+                        },
+                        label: "5-10分钟"
+                    }, {
+                        value: "15",
+                        symbol: {
+                            type: "simple-fill",
+                            outline: {
+                                width: 0
+                            },
+                            color: [0, 197, 255, 0.7]
+                        },
+                        label: "10-15分钟"
+                    }]
+                }
+
+            });
+
+            var baseLayer = new TileLayer({
+                url: "http://tilesvc.cindata.cn/arcgis/rest/services/comm/ChinaGray/MapServer",
+                legendEnabled: false
+            });
+            var baseMap = new Basemap({
+                baseLayers: [baseLayer],
+                title: "ChinaGray",
+                id: "ChinaGray"
+            });
+
+            var map = new Map({
+                basemap: baseMap,
+                layers: [layer_access, layer_hospital]
+            });
+
+            var view = new MapView({
+                container: "viewDiv",
+                map: map,
+                extent: {
+                    xmax: 13084371.599381696,
+                    xmin: 12839773.108869039,
+                    ymax: 4912023.336764436,
+                    ymin: 4796144.801884064,
+                    spatialReference: 102113
+                }
+            });
+
+            view.ui.add(new Legend({
+                view: view
+            }), "bottom-right");
+            view.ui.remove(["attribution"]);
+
+            // layer.when(function () {
+            //     view.extent = layer.fullExtent;
+            // });
+
+            // view.on("key-down", function (event) {
+            //     console.log(view.center + ":" + view.zoom);
+            // });
+
+
+        });
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv"></div>
+</body>
+
+</html>

@@ -1,0 +1,997 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>孝感台区</title>
+    <script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+    <!--<script src="js/vue.min.js"></script>-->
+    <!--<link href="js/iview/styles/iview.css" rel="stylesheet">-->
+    <!--<script src="js/iview/iview.min.js"></script>-->
+    <script src="//vuejs.org/js/vue.min.js"></script>
+    <link href="//unpkg.com/iview/dist/styles/iview.css" rel="stylesheet" >
+    <script src="//unpkg.com/iview/dist/iview.min.js"></script>
+    <link href='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.css' rel='stylesheet'/>
+    <script src='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.js'></script>
+    <link href="js/citySelect/citySelect/common.css" rel="stylesheet">
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+    <script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+    <script src="js/citySelect/citySelect/citySelect.js"></script>
+    <script src="js/data.js"></script>
+</head>
+<body>
+<div id='app'>
+    <radio-group v-model="buttonType" @on-change="changeType" type="button" class="group-button">
+        <Radio label="全部">全部</Radio>
+        <Radio label="重损">重损</Radio>
+        <Radio label="高损">高损</Radio>
+        <Radio label="负损">负损</Radio>
+    </radio-group>
+    <i-input search
+             v-model="keyword"
+             placeholder="输入台区名称搜索..."
+             class="search-input"
+             @on-search="search()">
+        <Icon type="ios-search" slot="suffix" class="input-icon"/>
+    </i-input>
+    <div id='map'></div>
+    <div class="legend"
+         v-for="(value,key) in legend"
+         v-show="value.isShow">
+        <div class="legend-title">{{areaInfo.name+value.title}}</div>
+        <ul class="legend-content">
+            <li class="legend-item" v-for="(item,index) in value.content">
+                <div class="item-color"
+                     :style="{'background-color': item.color}"
+                     :class="item.isSelect?'':'unselect'"
+                     @click="legendItemClick(item)"></div>
+                <span class="item-text">{{item.text}}</span>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="citySelect-show" class="suspended-frame">
+    <span>孝感市</span>
+    <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+</div>
+<div id="citySelectDiv" style="display:none;" class="suspended-frame">
+    <div id="citySelect-title">当前城市：孝感市</div>
+    <div id="citySelect-content">
+        <ul id="citySelect-popular">
+            <li name="北京市">北京市</li>
+            <li name="沈阳市">沈阳市</li>
+            <li name="哈尔滨市">哈尔滨市</li>
+            <li name="上海市">上海市</li>
+            <li name="杭州市">杭州市</li>
+            <li name="青岛市">青岛市</li>
+            <li name="武汉市">武汉市</li>
+            <li name="广州市">广州市</li>
+            <li name="深圳市">深圳市</li>
+            <li name="重庆市">重庆市</li>
+            <li name="成都市">成都市</li>
+        </ul>
+        <div id="citySelect-toolbar">
+            <div id="citySelect-province" class="citySelect-btn">按省份</div>
+            <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+            <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+            <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+            </ul>
+            <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+            </ul>
+        </div>
+        <div id="citySelect-list">
+            <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+            </dl>
+            <dl id="citySelect-city-list" class="citySelect-list">
+            </dl>
+        </div>
+    </div>
+</div>
+<style>
+    html, body {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+        background-color: #f5f5f5;
+    }
+    #app,
+    #map{
+        width:100%;
+        height:100%;
+    }
+    .group-button{
+        position: absolute;
+        z-index: 1;
+        top: 20px;
+        left: 50%;
+        margin-left: -110px;
+    }
+    .input-icon{
+        cursor:pointer !important;
+    }
+    .search-input{
+        position: absolute;
+        left: 20px;
+        top: 20px;
+        width: 200px;
+        z-index: 1;
+    }
+    #citySelect-show{
+        right: unset;
+        left: 221px;
+        height: 32px;
+        line-height: 32px;
+        border-radius: 4px;
+        border: 1px solid #dddee1;
+        box-shadow: unset;
+    }
+    #citySelectDiv{
+        right: unset;
+        left: 221px;
+        top: 55px;
+    }
+    .legend{
+        position: absolute;
+        background-color: rgb(255, 255, 255);
+        box-shadow: rgba(0, 0, 0, 0.2) 1px 1px 2px;
+        left: 20px;
+        bottom: 20px;
+        border-radius: 5px;
+        width: 140px;
+        padding: 10px;
+        font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        font-stretch: 100%;
+    }
+    .legend-title{
+        height: 20px;
+        line-height: 20px;
+        color: rgba(102, 102, 102, 1);
+        font-weight: bold;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    .legend-content{
+        padding-left: 5px;
+        margin-top: 10px;
+        margin-bottom: 0px;
+    }
+    .legend-item{
+        white-space: nowrap;
+        list-style: none;
+        margin-bottom: 5px;
+    }
+    .item-color{
+        display: inline-block;
+        vertical-align: middle;
+        width: 15px;
+        height: 15px;
+        background-color: #aaaaaa;
+        border: 1.5px solid #fff;
+        box-shadow: 0 2px 5px 0 rgba(0,0,0,0.24);
+        cursor: pointer;
+        /*border-radius: 50%;*/
+    }
+    .item-color.unselect{
+        background-color: rgba(0,0,0,0) !important;
+        border: 1.5px solid rgba(0,0,0,0.24);
+    }
+    .item-text{
+        display: inline-block;
+        vertical-align: middle;
+        padding-left: 10px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        max-width: 120px;
+        color: rgba(102, 102, 102, 1);
+    }
+</style>
+<script>
+    var ColorList = ['#A4F6FF', '#6CE3FB', '#4BC9F7', '#40A7E3', '#1E75C2', '#20569F', '#133D7B'];
+    var GapList = {
+        '2':{
+            '全部':[800, 1000, 1200,1400,1600,1800],
+            '重损':[100, 200, 300,400,500,600],
+            '高损':[100, 200, 300,400,500,600],
+            '负损':[100, 200, 300,400,500,600],
+        },
+        '3':{
+            '全部':[10, 30, 50,70,90,110],
+            '重损':[5, 10, 15,20,25,30],
+            '高损':[5, 10, 15,20,25,30],
+            '负损':[5, 10, 15,20,25,30],
+        },
+        '4':{
+            '全部':[10, 30, 50,70,90,110],
+            '重损':[5, 10, 15,20,25,30],
+            '高损':[5, 10, 15,20,25,30],
+            '负损':[5, 10, 15,20,25,30],
+        }
+    }
+    var app = new Vue({
+        el: '#app',
+        data: {
+            keyword:'',
+            buttonType: '全部',
+            areaInfo: {
+                name: '孝感市',
+                level: 2,
+                other: {
+                    properties:{
+                      city_id: 1926
+                    }
+                }
+            },
+            map: null,
+            zooms:[6,8,9,11,24],
+            popup: new mapboxgl.Popup({
+                closeButton: true,
+                closeOnClick: false
+            }),
+            featureClicked: null,
+            legend: {
+                'one': {
+                    isShow: true,
+                    title: '：台区总体分布',
+                    content: [
+                        {
+                            color: ColorList[6],
+                            isSelect: true,
+                            text: GapList['2']['全部'][5]+'以上',
+                            filter: ['all', [">", 'plotratio', 4.5]]
+                        },
+                        {
+                            color: ColorList[5],
+                            isSelect: true,
+                            text: GapList['2']['全部'][4]+'~'+GapList['2']['全部'][5],
+                            filter: ['all', [">", 'plotratio', 2], ["<", 'plotratio', 4.5]]
+                        },
+                        {
+                            color: ColorList[4],
+                            isSelect: true,
+                            text: GapList['2']['全部'][3]+'~'+GapList['2']['全部'][4],
+                            filter: ['all', [">", 'plotratio', 1], ["<", 'plotratio', 2]]
+                        },
+                        {
+                            color: ColorList[3],
+                            isSelect: true,
+                            text: GapList['2']['全部'][2]+'~'+GapList['2']['全部'][3],
+                            filter: ['all', [">", 'plotratio', 0.5], ["<", 'plotratio', 1]]
+                        },
+                        {
+                            color: ColorList[2],
+                            isSelect: true,
+                            text: GapList['2']['全部'][1]+'~'+GapList['2']['全部'][2],
+                            filter: ['all', [">=", 'plotratio', 0], ["<", 'plotratio', 0.5]]
+                        },
+                        {
+                            color: ColorList[1],
+                            isSelect: true,
+                            text: GapList['2']['全部'][0]+'~'+GapList['2']['全部'][1],
+                            filter: ['all', [">=", 'plotratio', 0], ["<", 'plotratio', 0.5]]
+                        },
+                        {
+                            color: ColorList[0],
+                            isSelect: true,
+                            text: 0+'~'+GapList['2']['全部'][0],
+                            filter: ['all', [">=", 'plotratio', 0], ["<", 'plotratio', 0.5]]
+                        },
+                    ]
+                },
+                'two': {
+                    isShow: false,
+                    title: '：台区易损情况',
+                    content: [
+                        {
+                            color: 'rgb(230,30,30)',
+                            isSelect: true,
+                            text: '重损',
+                            filter: ['all', [">", 'plotratio', 4.5]]
+                        },
+                        {
+                            color: 'rgb(255,190,6)',
+                            isSelect: true,
+                            text: '高损',
+                            filter: ['all', [">", 'plotratio', 2], ["<", 'plotratio', 4.5]]
+                        },
+                        {
+                            color: 'rgb(254,156,41)',
+                            isSelect: true,
+                            text: '负损',
+                            filter: ['all', [">", 'plotratio', 1], ["<", 'plotratio', 2]]
+                        },
+                        {
+                            color: 'rgb(59,181,166)',
+                            isSelect: true,
+                            text: '正常',
+                            filter: ['all', [">", 'plotratio', 0.5], ["<", 'plotratio', 1]]
+                        }
+                    ]
+                },
+            },
+        },
+        created: function () {
+            // init data
+        },
+        mounted: function () {
+            this.initMap();
+        },
+        watch: {
+            // 如果 `areaInfo` 发生改变，这个函数就会运行
+            areaInfo: function (newAreaInfo, oldAreaInfo) {
+            }
+        },
+        methods: {
+            changeType: function () {
+                for(var i=0;i<this.legend['one'].content.length;i++){
+                    if(i==0){
+                        this.legend['one'].content[i].text = GapList[this.areaInfo.level+''][this.buttonType][5-i]+'以上';
+                    }else if(i==this.legend['one'].content.length-1){
+                        this.legend['one'].content[i].text = '0~'+GapList[this.areaInfo.level+''][this.buttonType][6-i];
+                    }else{
+                        this.legend['one'].content[i].text = GapList[this.areaInfo.level+''][this.buttonType][5-i]+'~'+GapList[this.areaInfo.level+''][this.buttonType][6-i];
+                    }
+                }
+                var colorStyle = {
+                    type: 'interval',
+                    property: "substation_total_cnt",
+                    stops: [
+                        [0,'#D6D6D4'],
+                        [1,ColorList[0]],
+                        [GapList[this.areaInfo.level+''][this.buttonType][0],ColorList[1]],
+                        [GapList[this.areaInfo.level+''][this.buttonType][1],ColorList[2]],
+                        [GapList[this.areaInfo.level+''][this.buttonType][2],ColorList[3]],
+                        [GapList[this.areaInfo.level+''][this.buttonType][3],ColorList[4]],
+                        [GapList[this.areaInfo.level+''][this.buttonType][4],ColorList[5]],
+                        [GapList[this.areaInfo.level+''][this.buttonType][5],ColorList[6]]
+                    ],
+                    default: '#D6D6D4'
+                };
+                var breakTypeFiter=['==','breakType',1];
+                switch (this.buttonType){
+                    case '全部':
+                        colorStyle.property = 'substation_break_cnt';
+                        this.legend['one'].title = '：易损台区分布';
+                        breakTypeFiter=['!=','breakType',999];
+                        break;
+                    case '重损':
+                        colorStyle.property = 'substation_heavy_cnt';
+                        this.legend['one'].title = '：重损台区分布';
+                        breakTypeFiter=['==','breakType',1];
+                        break;
+                    case '高损':
+                        colorStyle.property = 'substation_high_cnt';
+                        this.legend['one'].title = '：高损台区分布';
+                        breakTypeFiter=['==','breakType',2];
+                        break;
+                    case '负损':
+                        colorStyle.property = 'substation_low_cnt';
+                        this.legend['one'].title = '：负损台区分布';
+                        breakTypeFiter=['==','breakType',3];
+                        break;
+                }
+                app.map.setPaintProperty('county', 'fill-color', colorStyle);
+                app.map.setLayoutProperty('county_symbol', 'text-field', ["concat",['get', 'name'], '\n', ["to-string", ['get', colorStyle.property]]]);
+                app.map.setPaintProperty('town', 'fill-color', colorStyle);
+                app.map.setLayoutProperty('town_symbol', 'text-field', ["concat",['get', 'name'], '\n', ["to-string", ['get', colorStyle.property]]]);
+                // app.map.setFilter('taiqu-cluster-point', ['all',["has", "point_count"],breakTypeFiter]);
+                // app.map.setFilter('taiqu-cluster-count', ['all',["has", "point_count"],breakTypeFiter]);
+                app.map.setFilter('taiqu-unclustered-point', ['all',["!has", "point_count"],breakTypeFiter]);
+                // var filterPoint = {"type":"FeatureCollection", "features": []}
+                // for(var i=0;i<data.taiqu_point.features.length;i++){
+                //
+                // }
+            },
+            search: function () {
+                if(!this.keyword){
+                    this.$Message.warning({
+                        content: '搜索失败：关键词不能为空!',
+                        duration: 2,
+                        closable:true,
+                    });
+                }else{
+                    var isSearched = false;
+                    for(var i =0;i<data.taiqu_point.features.length;i++){
+                        if(data.taiqu_point.features[i].properties.name.indexOf(this.keyword)>-1){
+                            this.map.setCenter(data.taiqu_point.features[i].geometry.coordinates);
+                            this.map.setZoom(16);
+                            isSearched = true;
+                            break;
+                        }
+                    }
+                    if(!isSearched){
+                        this.$Message.warning({
+                            content: '搜索失败：未查询到与<label style="color:red">'+this.keyword+'</label>相关的台区!',
+                            duration: 2,
+                            closable:true,
+                        });
+                    }
+                }
+                // alert(this.keyword);
+            },
+            legendItemClick: function (item) {
+                item.isSelect = !item.isSelect;
+                var filter=['any'];
+                var legend = this.legend['one'];
+                for(var i = 0;i<legend.content.length;i++){
+                    if(legend.content[i].isSelect)filter.push(legend.content[i].filter);
+                }
+                if(filter.length == 1)filter.push(false);
+                this.map.setFilter('community',filter);
+                this.map.setFilter('community_symbol',filter);
+                this.map.setFilter('community_symbol_more',filter);
+            },
+            initMap: function () {
+                mapboxgl.accessToken = 'pk.eyJ1Ijoiam5leCIsImEiOiJjamw0a3UyejkwNTl5M3Bqb29oa3AxeTNyIn0.TkW5lUoMnYJW2xJoVGNk3g';
+                var basemapUrl = 'http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaGray/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
+                var style = {
+                    version: 8,
+                    // glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+                    glyphs: "./fonts/{fontstack}/{range}.pbf",
+                    sources: {
+                        "ChinaGray": {
+                            "type": "raster",
+                            "tiles": [basemapUrl],
+                            "tileSize": 256
+                        },
+                    },
+                    layers: [{
+                        "id": "baseMap",
+                        "type": "raster",
+                        "source": "ChinaGray"
+                    }]
+                };
+                this.map = new mapboxgl.Map({
+                    container: 'map',
+                    style: style,
+                    minZoom: this.zooms[0],
+                    maxZoom: this.zooms[4],
+                    bearing: 0,
+                    pitch: 0,
+                    zoom: this.zooms[1],
+                    center: [113.87961966999978, 31.120401790000074],
+                    // center: [116.39358594999999, 39.90533639999998],
+                    // zoom: 3.3730078727134853,
+                    // center: [106.74769083687772, 36.73816806558061],
+                    preserveDrawingBuffer: true
+                });
+                this.map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+                this.map.on('load', function () {
+                    app.addImages();
+                    app.addSource_taiqu();
+                    app.addSource_area_polygon();
+                    app.addSource_area_point();
+                    app.addSource_office_point();
+                    app.addSource_office_polygon();
+                    app.addLayer_area();
+                    app.addLayer_jiedao();
+                    app.addLayer_taiqu();
+                });
+                this.map.on('moveend', function () {
+                    var currentZoom = app.map.getZoom();
+                    var bbox = [app.map.getBounds()._sw.lng, app.map.getBounds()._sw.lat, app.map.getBounds()._ne.lng, app.map.getBounds()._ne.lat];
+                    app.queryAreaInfo(currentZoom, bbox, function (areaInfo) {
+                        if (areaInfo) {
+                            app.areaInfo = areaInfo;
+                            $('#citySelect-show>span').html(app.areaInfo.name);
+                            if(app.areaInfo.level == 2){
+                                app.legend['one'].isShow = true;
+                                app.legend['two'].isShow = false;
+                                app.map.setFilter('county',['all',['==','city_id',app.areaInfo.other.properties.city_id]]);
+                                app.map.setFilter('county_symbol',['all',['==','city_id',app.areaInfo.other.properties.city_id]]);
+                            }else if(app.areaInfo.level == 3){
+                                app.legend['one'].isShow = true;
+                                app.legend['two'].isShow = false;
+                                app.map.setFilter('town',['all',['==','parent_area',app.areaInfo.other.properties.area_id]]);
+                                app.map.setFilter('town_symbol',['all',['==','parent_area',app.areaInfo.other.properties.area_id]]);
+                            }else if(app.areaInfo.level == 4){
+                                app.legend['one'].isShow = false;
+                                app.legend['two'].isShow = true;
+                            }
+                            app.changeType();
+                        }
+                    });
+                });
+            },
+            queryAreaInfo: function (zoom,bbox,success) {
+                if (zoom < 3) {
+                    success({name: '全国', level: 0, other: {}});
+                } else {
+                    var level, url, typeName, maxFeatures;
+                    if (zoom >= 3 && zoom < 6) {//省级别
+                        level = 1;
+                        url = 'http://geoserver.cindata.cn/geoserver/cim/ows';
+                        typeName = 'gr_province';
+                        maxFeatures = 100;
+                    } else if (zoom >= 6 && zoom < 9){//城市级别
+                        level = 2;
+                        url = 'http://geoserver.cindata.cn/geoserver/cim/ows';
+                        typeName = 'gr_city';
+                        maxFeatures = 500;
+                    }else if (zoom >= 9  && zoom < 11){//区县级别
+                        level = 3;
+                        url = 'http://geoserver.cindata.cn/geoserver/cim/ows';
+                        typeName = 'gr_area';
+                        maxFeatures = 5000;
+                    }else if (zoom >= 11){//区县级别
+                        level = 4;
+                        url = 'http://geoserver.cindata.cn/geoserver/cim/ows';
+                        typeName = 'gr_area';
+                        maxFeatures = 5000;
+                    }
+                    $.ajax({
+                        type: "post",
+                        async: true,
+                        url: url,
+                        data: {
+                            service: "WFS",
+                            version: "1.0.0",
+                            request: "GetFeature",
+                            typeName: typeName,
+                            maxFeatures: maxFeatures,
+                            outputFormat: "application/json",
+                            filter: "<Filter xmlns='http://www.opengis.net/ogc' xmlns:gml='http://www.opengis.net/gml'>" +
+                            "<Intersects><PropertyName>polygon</PropertyName>" +
+                                "<gml:Point><gml:coordinates>"+app.map.getCenter().lng+","+app.map.getCenter().lat+"</gml:coordinates></gml:Point>" +
+                            "</Intersects></Filter>"
+                        },
+                        success: function (geojson) {
+                            if(!geojson||geojson.features.length==0)return null;
+                            success({
+                                name: geojson.features[0].properties.name,
+                                level: level,
+                                other: geojson.features[0]
+                            });
+                        }
+                    });
+                }
+            },
+            //添加气泡
+            addPopup:function(layerId, properties, propertienames) {
+                if (this.featureClicked) {
+                    this.map.off('click', layerId, function (e) {
+                    });
+                    this.popup.setHTML(getPopupHtmlByProperties(properties, propertienames))
+                }
+
+                // var properties = ['avg_price','area_cnt','area_id','area_level	','avg_price','building_cnt','city_id	','community_cnt','created_dt','	house_cnt'];
+                this.map.on('click', layerId, function (e) {
+                    featureClicked = e.features[0];
+                    var html = app.getPopupHtmlByProperties(properties, propertienames);
+                    app.popup.setLngLat(e.lngLat)
+                        .setHTML(html)
+                        .addTo(app.map);
+                });
+                // Change the cursor to a pointer when the mouse is over the states layer.
+                this.map.on('mouseenter', layerId, function () {
+                    app.map.getCanvas().style.cursor = 'pointer';
+                });
+
+                // Change it back to a pointer when it leaves.
+                this.map.on('mouseleave', layerId, function () {
+                    app.map.getCanvas().style.cursor = '';
+                });
+            },
+            getPopupHtmlByProperties:function(properties, propertienames){
+                var maxlength = 30
+                var html = '';
+                if (!properties || properties.length == 0) {
+                    properties = [];
+                    for (var property in featureClicked.properties) {
+                        properties.push(property);
+                    }
+                }
+                if (!propertienames) propertienames = properties;
+                var breakTypeName = ['正常','重损','高损','负损'];
+                for (var index=0; index< properties.length;index++) {
+                    var property = properties[index];
+                    var propertiename = propertienames[index];
+                    var value = featureClicked.properties[properties[index]];
+                    if (!propertiename) propertiename = property;
+                    if(property=='breakType')value = breakTypeName[value];
+                    if (!value) value = '-';
+                    if (value.length > maxlength) value = value.substr(0, maxlength);
+                    html += '<div><label>' + propertiename + '：</label><label title="'+ featureClicked.properties[properties[index]]+'">' + value + '</label></div>';
+                }
+                return html;
+            },
+            addImages: function () {
+                var baseDir = '/github/002.thematicmap/20.孝感钻取/xiaogan/images/';
+                var imageList = ['point-1','point-2','point-3','point-4','point-5'];
+                app.map.loadImage(baseDir + imageList[0] + '.png', function (error, image) {
+                    if (error)throw error;
+                    app.map.addImage(imageList[0] + '.png', image);
+                });
+                app.map.loadImage(baseDir + imageList[1] + '.png', function (error, image) {
+                    if (error)throw error;
+                    app.map.addImage(imageList[1] + '.png', image);
+                });
+                app.map.loadImage(baseDir + imageList[2] + '.png', function (error, image) {
+                    if (error)throw error;
+                    app.map.addImage(imageList[2] + '.png', image);
+                });
+                app.map.loadImage(baseDir + imageList[3] + '.png', function (error, image) {
+                    if (error)throw error;
+                    app.map.addImage(imageList[3] + '.png', image);
+                });
+                app.map.loadImage(baseDir + imageList[4] + '.png', function (error, image) {
+                    if (error)throw error;
+                    app.map.addImage(imageList[4] + '.png', image);
+                });
+            },
+            //添加事件
+            addEvent:function( type,layerId,callback) {
+                this.map.off(type, layerId, function (e) {});
+                this.map.on(type, layerId, function (e) {
+                    callback(e);
+                });
+                // Change the cursor to a pointer when the mouse is over the states layer.
+                this.map.on('mouseenter', layerId, function () {
+                    app.map.getCanvas().style.cursor = 'pointer';
+                });
+
+                // Change it back to a pointer when it leaves.
+                this.map.on('mouseleave', layerId, function () {
+                    app.map.getCanvas().style.cursor = '';
+                });
+            },
+            addSource_area_polygon: function () {
+                this.map.addSource("area_polygon", {
+                    type: "geojson",
+                    data: data.area_polygon,
+                });
+            },
+            addSource_area_point: function () {
+                this.map.addSource("area_point", {
+                    type: "geojson",
+                    data: data.area_point,
+                });
+            },
+            addSource_office_point: function () {
+                this.map.addSource("office_point", {
+                    type: "geojson",
+                    data: data.office_point,
+                });
+            },
+            addSource_office_polygon: function () {
+                this.map.addSource("office_polygon", {
+                    type: "geojson",
+                    data: data.office_polygon,
+                });
+            },
+            addSource_taiqu: function () {
+                this.map.addSource("taiqu", {
+                    type: "geojson",
+                    data: data.taiqu_point,
+                    cluster: true,
+                    clusterMaxZoom: 12, // Max zoom to cluster points on
+                });
+            },
+            removeSource_taiqu: function () {
+                this.map.removeSource("taiqu");
+            },
+            addSource_taiqu_bk: function () {
+                var dataUrl = "http://geoserver.cindata.cn/geoserver/gxd/ows?service=WFS&version=1.0.0" +
+                    "&request=GetFeature&typeName=gxd:gp_community&maxFeatures=10000" +
+                    "&outputFormat=application%2Fjson" +
+                    "&filter=<Filter><PropertyIsEqualTo><PropertyName>city_id</PropertyName><Literal>1926</Literal></PropertyIsEqualTo></Filter>";
+                //area_id,1931,云梦县
+                this.map.addSource("taiqu", {
+                    type: "geojson",
+                    data: dataUrl,
+                    cluster: true,
+                    clusterMaxZoom: 13, // Max zoom to cluster points on
+                    clusterRadius: 10 // Radius of each cluster when clustering points (defaults to 50)
+                });
+            },
+            addLayer_area: function () {
+                this.map.addLayer({
+                    'id': 'county',
+                    'type': 'fill',
+                    // 'source': {
+                    //     'scheme': "tms",
+                    //     'type': "vector",
+                    //     'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/cim:gr_area_xiaogan@EPSG:900913@pbf/{z}/{x}/{y}.pbf"],
+                    // },
+                    // "source-layer": "gr_area_xiaogan",
+                    source: "area_polygon",
+                    'filter': ['all',['==','city_id',app.areaInfo.other.properties.city_id]],
+                    'paint': {
+                        'fill-opacity': 0.8, //不透明度 `0 ~ 1.0`
+                        // 'fill-color':'red',
+                        'fill-color': {
+                            type: 'interval',
+                            property: "substation_break_cnt",
+                            stops: [
+                                [0,'#D6D6D4'],
+                                [1,ColorList[0]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][0],ColorList[1]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][1],ColorList[2]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][2],ColorList[3]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][3],ColorList[4]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][4],ColorList[5]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][5],ColorList[6]]
+                            ],
+                            default: '#D6D6D4'
+                        },
+                        'fill-outline-color': 'white', //轮廓线颜色
+                    },
+                    minzoom:  app.zooms[0],
+                    maxzoom:  app.zooms[2]
+                });
+                this.map.addLayer({
+                    'id': 'county_boundry',
+                    'type': 'line',
+                    source: "area_polygon",
+                    'paint': {
+                        'line-opacity': 0.8, //不透明度 `0 ~ 1.0`
+                        'line-color': '#fff',
+                        'line-width': 2, //轮廓线颜色
+                    },
+                    minzoom:  app.zooms[0],
+                    maxzoom:  app.zooms[3]
+                });
+                this.map.addLayer({
+                    'id': 'county_symbol',
+                    'type': 'symbol',
+                    // 'source': {
+                    //     'scheme': "tms",
+                    //     'type': "vector",
+                    //     'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/cim:gp_area_xiaogan@EPSG:900913@pbf/{z}/{x}/{y}.pbf"],
+                    // },
+                    // "source-layer": "gp_area_xiaogan",
+                    source: "area_point",
+                    // 'filter': ['all',['==','house_type','1000'],['>=','plotratio',0]],
+                    'layout': {
+                        'text-field':["concat",['get', 'name'], '\n', ["to-string", ['get', 'substation_break_cnt']]],
+                        // 'text-field':["to-string", ['get', 'substation_total_cnt']],
+                        // 'text-field':["concat",["to-string", ['get', 'city_id']], '\n', ["to-string", ['get', 'substation_total_cnt']]],
+                        // 'text-field':['get', 'name'],
+                        'text-font': ['黑体'],
+                        // 'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+                        'text-size': 12, //字体大小，默认16
+                        'text-offset': [0, 0], //[x,y]文字的偏移
+                        'text-max-width': 5, //字体最大宽度，默认10 ems
+                    },
+                    'paint': {
+                        'text-color': '#000', //填充色
+                        'text-halo-color': '#fff', //文本光晕颜色
+                        'text-halo-width': 2, //文本光晕宽度
+                        'text-halo-blur': 0, //文本光晕模糊度
+                    },
+                    minzoom:  app.zooms[0],
+                    maxzoom:  app.zooms[2]
+                });
+                this.addEvent( 'click','county',function(e){
+                    app.map.setZoom(app.zooms[2]);
+                    app.map.setCenter([e.lngLat.lng,e.lngLat.lat]);
+                })
+                // this.addPopup('gr_area_xiaogan',['name','avg_price'],['区县名称','均价']);
+            },
+            addLayer_jiedao: function () {
+                this.map.addLayer({
+                    'id': 'town',
+                    'type': 'fill',
+                    // 'source': {
+                    //     'scheme': "tms",
+                    //     'type': "vector",
+                    //     'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/cim:gr_area_xiaogan_jiedao@EPSG:900913@pbf/{z}/{x}/{y}.pbf"],
+                    // },
+                    // "source-layer": "gr_area_xiaogan_jiedao",
+                    'source': 'office_polygon',
+                    // 'filter': ['all',['>=','plotratio',0]],
+                    'paint': {
+                        'fill-opacity': 0.8, //不透明度 `0 ~ 1.0`
+                        'fill-color': {
+                            type: 'interval',
+                            property: "substation_break_cnt",
+                            stops: [
+                                [0,'#D6D6D4'],
+                                [1,ColorList[0]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][0],ColorList[1]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][1],ColorList[2]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][2],ColorList[3]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][3],ColorList[4]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][4],ColorList[5]],
+                                [GapList[this.areaInfo.level+''][app.buttonType][5],ColorList[6]]
+                            ],
+                            default: '#D6D6D4'
+                        },
+                        'fill-outline-color': 'white', //轮廓线颜色
+                    },
+                    minzoom:  app.zooms[2],
+                    maxzoom:  app.zooms[3]
+                });
+                this.map.addLayer({
+                    'id': 'town_boundry',
+                    'type': 'line',
+                    source: "office_polygon",
+                    'paint': {
+                        'line-opacity': 0.8, //不透明度 `0 ~ 1.0`
+                        'line-color': '#fff',
+                        'line-width': 1, //轮廓线颜色
+                    },
+                    minzoom:  app.zooms[2],
+                    maxzoom:  app.zooms[4]
+                });
+                this.map.addLayer({
+                    'id': 'town_symbol',
+                    'type': 'symbol',
+                    // 'source': {
+                    //     'scheme': "tms",
+                    //     'type': "vector",
+                    //     'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/cim:gp_streetoffice_xiaogan@EPSG:900913@pbf/{z}/{x}/{y}.pbf"],
+                    // },
+                    // "source-layer": "gp_streetoffice_xiaogan",
+                    'source': 'office_point',
+                    // 'filter': ['all',['==','house_type','1000'],['>=','plotratio',0]],
+                    'layout': {
+                        'text-field':['get', 'name'],
+                        // 'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'], //注记字体
+                        'text-font': ['黑体'],
+                        'text-size': 12, //字体大小，默认16
+                        'text-offset': [0, 0], //[x,y]文字的偏移
+                        'text-max-width': 5, //字体最大宽度，默认10 ems
+                    },
+                    'paint': {
+                        'text-color': '#000', //填充色
+                        'text-halo-color': '#fff', //文本光晕颜色
+                        'text-halo-width': 2, //文本光晕宽度
+                        'text-halo-blur': 0, //文本光晕模糊度
+                    },
+                    minzoom:  app.zooms[2],
+                    maxzoom:  app.zooms[3]
+                });
+                this.addEvent( 'click','town',function(e){
+                    app.map.setZoom(app.zooms[3]);
+                    app.map.setCenter([e.lngLat.lng,e.lngLat.lat]);
+                })
+                // this.addPopup('gr_area_xiaogan_jiedao',['name','avg_price'],['乡镇名称','均价']);
+            },
+            removeLayer_taiqu: function () {
+                this.map.removeLayer('taiqu-cluster-point');
+                this.map.removeLayer('taiqu-cluster-count');
+                this.map.removeLayer('taiqu-unclustered-point');
+            },
+            addLayer_taiqu: function () {
+                this.map.addLayer({
+                    id: 'taiqu-cluster-point',
+                    type: 'circle',
+                    source: "taiqu",
+                    filter: ["has", "point_count"],
+                    paint: {
+                        'circle-radius': [
+                            "step",
+                            ["get", "point_count"],
+                            15,
+                            10,
+                            20,
+                            15,
+                            25,
+                            20,
+                            30
+                        ], //半径
+                        'circle-opacity': 1, //不透明度 `0 ~ 1.0`
+                        // 'circle-color': 'green',
+                        'circle-color': [
+                            "step",
+                            ["get", "point_count"],
+                            "#11A701",
+                            10,
+                            "#A9C202",
+                            15,
+                            "#EFBD03",
+                            20,
+                            "#E81617"
+                        ],
+                        'circle-blur': 0,
+                        'circle-stroke-width': 5, //轮廓线宽度
+                        'circle-stroke-opacity': 0.3, //轮廓线透明度
+                        'circle-stroke-color':[
+                            "step",
+                            ["get", "point_count"],
+                            "#11A701",
+                            10,
+                            "#A9C202",
+                            15,
+                            "#EFBD03",
+                            20,
+                            "#E81617"
+                        ],
+                    },
+                    minzoom: app.zooms[3],
+                });
+                this.map.addLayer({
+                    id: 'taiqu-cluster-count',
+                    type: "symbol",
+                    source: "taiqu",
+                    filter: ["has", "point_count"],
+                    layout: {
+                        "text-field": "{point_count_abbreviated}",
+                        // "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+                        'text-font': ['黑体'],
+                        "text-size": 12,
+                    },
+                    paint: {
+                        'text-color': '#000', //填充色
+                        'text-halo-color': '#fff', //文本光晕颜色
+                        'text-halo-width': 2, //文本光晕宽度
+                        'text-halo-blur': 0, //文本光晕模糊度
+                    },
+                    minzoom: app.zooms[3],
+                });
+                this.map.addLayer({
+                    id: "taiqu-unclustered-point",
+                    type: "symbol",
+                    source: "taiqu",
+                    filter: ["!has", "point_count"],
+                    layout: {
+                        "icon-allow-overlap": true,
+                        // "icon-image": "point-1.png",
+                        'icon-image': {
+                            type: 'categorical',
+                            property: "breakType",
+                            stops: [
+                                [0,'point-1.png'],
+                                [1,'point-2.png'],
+                                [2,'point-3.png'],
+                                [3,'point-4.png'],
+                            ],
+                            default: 'point-1.png'
+                        },
+                        "icon-size":0.5,
+                    },
+                    minzoom: app.zooms[3],
+                });
+                this.addPopup('taiqu-unclustered-point',['name','breakType','breakCause','manager'],['设备名称','异常程度','异常原因','台区管理员']);
+            }
+        },
+    });
+</script>
+<script>
+    var ctrl = {
+        area: null,
+        cityId: 2,
+        swicthCity: function (area) {
+            this.area = area;
+            this.cityId = area.areaId;
+            var filter =
+                '&filter=' +
+                '<PropertyIsEqualTo>' +
+                '<PropertyName>city_id</PropertyName>' +
+                '<Literal>' + this.cityId + '</Literal>' +
+                '</PropertyIsEqualTo>'
+            var url = 'http://geoserver.cindata.cn/geoserver/cim/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=cim:gp_city'
+                + filter +
+                '&maxFeatures=100&outputFormat=application%2Fjson'
+            $.ajax({
+                url: url,
+                type: 'get',
+                async: false,
+                success: function (data) {
+                    var center = data.features[0].geometry.coordinates;
+                    ctrl.flyTos(center);
+                }
+            })
+        },
+        on: function () {
+            $('.btn_sw').on('click', function () {
+                ctrl.swicthCity(this.id)
+            });
+        },
+        flyTos: function (center) {
+            app.map.flyTo({
+                center: center,
+                zoom: 8,
+                bearing: 0,
+                speed: 1, // make the flying slow
+                curve: 1, // change the speed at which it zooms out
+                easing: function (t) { return t; }
+            });
+        }
+    }
+    ctrl.on();
+</script>
+</body>
+</html>

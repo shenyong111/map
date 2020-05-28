@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link>
+<title>租售价值比等高线</title>
+<meta name="description" content="租售价值比等高线">
+<link rel="shortcut icon" href="http://gisapi.cindata.cn/icon/favicon.ico" />
+<link rel="bookmark" href="http://gisapi.cindata.cn/icon/favicon.ico" />
+<link rel="stylesheet"  href="http://gisapi.cindata.cn/project/citySelect/common.css">
+<link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/css/main.css">
+<script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+<script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+<script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+<script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+<script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+<script type="text/javascript" src="http://gisapi.cindata.cn/project/citySelect/citySelect.js" ></script>
+</head>
+
+<body>
+    <div id="citySelect-show" class="suspended-frame">
+        <span>哈尔滨市</span>
+        <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+    </div>
+
+    <div id="citySelectDiv" style="display:none;" class="suspended-frame">
+        <div id="citySelect-title">当前城市：哈尔滨市</div>
+        <div id="citySelect-content">
+            <ul id="citySelect-popular">
+                <li name="北京市">北京市</li>
+                <li name="沈阳市">沈阳市</li>
+                <li name="哈尔滨市">哈尔滨市</li>
+                <li name="上海市">上海市</li>
+                <li name="杭州市">杭州市</li>
+                <li name="青岛市">青岛市</li>
+                <li name="武汉市">武汉市</li>
+                <li name="广州市">广州市</li>
+                <li name="深圳市">深圳市</li>
+                <li name="重庆市">重庆市</li>
+                <li name="成都市">成都市</li>
+            </ul>
+            <div id="citySelect-toolbar">
+                <div id="citySelect-province" class="citySelect-btn">按省份</div>
+                <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+                <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+                <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+                </ul>
+                <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+                </ul>
+            </div>
+            <div id="citySelect-list">
+                <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+                </dl>
+                <dl id="citySelect-city-list" class="citySelect-list">
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div id="div_main_top" style="width: 100%; float: left; border-left: solid 0px #388E8E;position:readonly">
+    <div id="div_main" style="width: 100%; float: left; border-left: solid 0px #388E8E;position:readonly">
+        <div id="gxdMap">
+        </div>
+    </div>
+    <div style="display:none;" id="template-div">
+        <div class="label-tail">
+            <img src="images/tail.png"
+                 style="width:16px;height:10px;position:absolute;">
+        </div>
+    </div> 
+</body>
+<script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+<script type="text/javascript" src="index.js"></script>
+<script>
+var cityIds = [2301,1101,3101,4401,4403,2305,4101,4406];
+var serverUrl = "http://gissvc4an.cindata.cn/arcgis/rest/services/special_map/Contour_ratio_XXXX/MapServer/0";
+$('#div_main').width($(window).width());
+$('#div_main').height($(window).height());
+$('#gxdMap').width($(window).width());
+$('#gxdMap').height($(window).height());
+var _ctx = '${ctx!}';
+var esri = {};
+require(["esri/Map",
+    "esri/Basemap",
+    "esri/views/MapView",
+    "esri/Graphic",
+    "esri/layers/WebTileLayer",
+    "esri/layers/GraphicsLayer",
+    "esri/widgets/Sketch/SketchViewModel",
+    "esri/geometry/Extent",
+    "esri/geometry/Point",
+    "esri/geometry/Circle",
+    "esri/geometry/Polygon",
+    "esri/geometry/Geometry",
+    "esri/layers/support/TileInfo",
+    "esri/core/watchUtils",
+    "esri/layers/FeatureLayer"
+], function(Map, Basemap, MapView, Graphic, WebTileLayer,
+    GraphicsLayer, SketchViewModel, Extent, Point, Circle,
+    Polygon, Geometry, TileInfo, WatchUtils,FeatureLayer) {
+    esri.Map = Map;
+    esri.Basemap = Basemap;
+    esri.views = {};
+    esri.views.MapView = MapView;
+    esri.views.SketchViewModel = SketchViewModel;
+    esri.Graphic = Graphic;
+    esri.layers = {};
+    esri.layers.WebTileLayer = WebTileLayer;
+    esri.layers.GraphicsLayer = GraphicsLayer;
+    esri.layers.support = {};
+    esri.layers.support.TileInfo = TileInfo;
+    esri.geometry = {};
+    esri.geometry.Extent = Extent;
+    esri.geometry.Point = Point;
+    esri.geometry.Circle = Circle;
+    esri.geometry.Polygon = Polygon;
+    esri.geometry.Geometry = Geometry;
+    esri.geometry.support = {};
+    esri.core = {};
+    esri.core.WatchUtils = WatchUtils;
+    esri.extend = {};
+    esri.layers.FeatureLayer = FeatureLayer;
+    init();
+    
+});
+</script>
+</html>

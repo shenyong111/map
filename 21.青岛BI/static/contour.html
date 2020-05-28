@@ -1,0 +1,399 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/jquery/jquery-2.1.1.js"></script>
+    <script src="js/vue/vue.js"></script>
+    <link href='js/mapbox/mapbox-gl.css' rel='stylesheet' />
+    <script src='js/mapbox/mapbox-gl.js'></script>
+</head>
+<body>
+<div id='app' style="">
+    <div id='map'></div>
+    <div class='map-min'></div>
+    <div class='map-marker-mask' :style="{transform: transform,opacity:opacity}">
+        <div class='map-marker'>
+            <div class='point' :style="{opacity:opacity}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"> <g><g>
+                    <circle opacity="0.7" fill="#00a2ff" cx="32" cy="32" r="6">
+                        <animate attributeName="r" from="6" to="32" begin="0s" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" from="0.7" to="0" begin="0s" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <circle fill="#00a2ff" opacity="0.7" cx="32" cy="32" r="6">
+                        <animate attributeName="r" from="6" to="32" begin="1s" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" from="0.7" to="0" begin="1s" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <circle fill="#00a2ff" cx="32" cy="32" r="6"/>
+                </g></g></svg>
+            </div>
+            <div class='line' :style="{width: width,opacity: opacity}"></div>
+            <div class='popup-mask' :style="{opacity: opacity}" >
+                <div class='popup'>
+                    <div>{{areaName}}：{{avg_price}}（均价）</div>
+                    <div>{{streetMax.name_p}}：{{streetMax.avg_price}}（最高）</div>
+                    <div>{{streetMin.name_p}}：{{streetMin.avg_price}}（最低）</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    html, body {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+        font-size:14px;
+        font-family:PingFangSC-Medium;
+        font-weight:500;
+    }
+    #map{
+        position:absolute;
+        left:0px;
+        top:0px;
+        width: 100%;
+        height: 100%;
+        background-color: #000000;
+    }
+    .map-min{
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 325px;
+        height: 427px;
+        background: url("images/area.png") center no-repeat;
+        background-size: 100%;
+        opacity: 0.9;
+    }
+    .map-marker-mask{
+        position: relative;
+        will-change: transform;
+        transition: opacity 1s ease 1s;
+    }
+    .map-marker{
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 500px;
+        height: 120px;
+        transition: opacity 0.8s ease 0.8s;
+    }
+    .map-marker>.point{
+        position: absolute;
+        top: 28px;
+    }
+    .map-marker>.line{
+        position: absolute;
+        top: 60px;
+        left: 32px;
+        border-top: 1px solid #00a2ff;
+        width: 0px;
+        transition: width 0.6s ease 0.6s;
+    }
+    .map-marker>.popup-mask{
+        position: absolute;
+        top: 45px;
+        left: 232px;
+        color:white;
+        width: 250px;
+        height:90px;
+        /*line-height: 90px;*/
+        text-align: center;
+        background: linear-gradient(-135deg, transparent 15px, #00a2ff 0) top right;
+        padding: 2px;
+        transition: opacity 0.4s ease 0.4s;
+    }
+    .map-marker>.popup-mask>.popup{
+        width: 250px;
+        height:90px;
+        background: linear-gradient(-135deg, transparent 15px, #2b2b2b 0) top right;
+    }
+    .map-marker>.popup-mask>.popup>div{
+        height:30px;
+        line-height: 30px;
+    }
+</style>
+<script src="data/contourLine.js"></script>
+<script src="data/streetPolygon.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            opacity: 0,
+           transform: 'translate(220px, 220px)',
+            width: 0,
+            areaName:'青岛市',
+            avg_price:'',
+            streetMax:{"avg_price":0,"name_p":""},
+            streetMin:{"avg_price":0,"name_p":""},
+           map: null,
+           area: [1501,1502,1503,1504,1505,1506,1507,1508,1509,1510],
+            currentIndex: 0,
+           areaConf:{
+                1501:{
+                    name: '市南区',
+                    avg_price:41965,
+                    transform: 'translate(185px, 250px)',
+                   fly:{center: [120.30470125000609,36.065331827553536],
+                       zoom: 12.119023618140458,
+                       bearing: 0,
+                       pitch: 0,
+                       // pitch: 28.499999999999982
+                    }
+
+                },
+                1502:{
+                    name: '市北区',
+                    avg_price:25851,
+                    transform: 'translate(180px, 235px)',
+                   fly:{ center: [120.354240505819,36.10493427026419],
+                       zoom: 11.532519681783713,
+                       bearing: 0,
+                       pitch: 0,
+                       // pitch: 46.99999999999999
+                    }
+
+                },
+                1503:{
+                    name: '黄岛区',
+                    avg_price:14907,
+                    transform: 'translate(80px, 290px)',
+                   fly:{center: [119.96066536664853,35.85560205241658],
+                       zoom: 9.700108859659464,
+                       bearing: 0,
+                       pitch: 0,
+                       // pitch: 26.500000000000007
+                    }
+
+                },
+                1504:{
+                    name: '崂山区',
+                    avg_price:37836,
+                    transform: 'translate(230px, 215px)',
+                   fly:{
+                       center: [120.46594748573648,36.1765238561393],
+                       zoom: 10.58672919559811,
+                       bearing: 0,
+                       // pitch: 37
+                   }
+
+                },
+                1505:{
+                    name: '李沧区',
+                    avg_price:22545,
+                    transform: 'translate(190px, 220px)',
+                   fly:{
+                       center: [120.42369713078108,36.184277945361206],
+                       zoom: 11.578084908727963,
+                       bearing: 0,
+                       // pitch: 56.000000000000014
+                   }
+
+                },
+                1506:{
+                    name: '城阳区',
+                    avg_price:15102,
+                    transform: 'translate(160px, 185px)',
+                   fly:{
+                       center: [120.32328825062052,36.24777516658882],
+                       zoom: 10.44048819092978,
+                       bearing: 0,
+                       // pitch: 36
+                   }
+
+                },
+                1507:{
+                    name: '胶州市',
+                    avg_price:8842,
+                    transform: 'translate(100px, 200px)',
+                   fly:{
+                       center: [119.7994022344847,36.218419432786035],
+                       zoom: 9.789620668729696,
+                       bearing: 0,
+                       // pitch: 20.999999999999996
+                   }
+
+                },
+                1508:{
+                    name: '即墨市',
+                    avg_price:11004,
+                    transform: 'translate(180px, 140px)',
+                   fly:{
+                       center: [120.34655013941306,36.42109812984265],
+                       zoom: 10.048907218558564,
+                       bearing: 0,
+                       pitch: 32
+                   }
+
+                },
+                1509:{
+                    name: '平度市',
+                    avg_price:7024,
+                    transform: 'translate(90px, 65px)',
+                   fly:{
+                       bearing: 0,
+                       center: [120.01416092821682,36.71536224716644],
+                       zoom: 9.571047569071962,
+                       bearing: 0,
+                       pitch: 30.499999999999996
+                   }
+
+                },
+                1510:{
+                   name: '莱西市',
+                    avg_price:6069,
+                    transform: 'translate(190px, 40px)',
+                   fly:{
+                       center: [120.41387744585736,36.95827798138236],
+                       zoom: 10.720291975132096,
+                       bearing: 0,
+                       pitch: 36.000000000000014
+                   }
+
+                }
+            },
+            areaPriceConf: {"1501":[{"parent_area":1501,"avg_price":24917,"name_p":"云南路街道办事处","area_id":24157},{"parent_area":1501,"avg_price":77922,"name_p":"8大关街道办事处","area_id":20555}],"1502":[{"parent_area":1502,"avg_price":23181,"name_p":"洛阳路街道办事处","area_id":47335},{"parent_area":1502,"avg_price":34898,"name_p":"同安路街道办事处","area_id":36366}],"1503":[{"parent_area":1503,"avg_price":0,"name_p":"藏南镇","area_id":44905},{"parent_area":1503,"avg_price":21702,"name_p":"薛家岛街道办事处","area_id":48488}],"1504":[{"parent_area":1504,"avg_price":17902,"name_p":"王哥庄街道","area_id":37519},{"parent_area":1504,"avg_price":38954,"name_p":"中韩街道","area_id":20539}],"1505":[{"parent_area":1505,"avg_price":18105,"name_p":"楼山街道办事处","area_id":41246},{"parent_area":1505,"avg_price":26923,"name_p":"9水路街道办事处","area_id":46111}],"1506":[{"parent_area":1506,"avg_price":8773,"name_p":"夏庄街道办事处","area_id":42435},{"parent_area":1506,"avg_price":16590,"name_p":"城阳街道办事处","area_id":57036}],"1507":[{"parent_area":1507,"avg_price":4129,"name_p":"铺集镇","area_id":38692},{"parent_area":1507,"avg_price":12409,"name_p":"3里河街道办事处","area_id":55853}],"1508":[{"parent_area":1508,"avg_price":4199,"name_p":"段泊岚镇","area_id":31486},{"parent_area":1508,"avg_price":15038,"name_p":"温泉街道办事处","area_id":38676}],"1509":[{"parent_area":1509,"avg_price":0,"name_p":"旧店镇","area_id":50899},{"parent_area":1509,"avg_price":19286,"name_p":"仁兆镇","area_id":39919}],"1510":[{"parent_area":1510,"avg_price":0,"name_p":"马连庄镇","area_id":55869},{"parent_area":1510,"avg_price":11156,"name_p":"日庄镇","area_id":21774}]}
+        },
+        mounted: function () {
+            this.initMap();
+        },
+        methods: {
+            initMap: function () {
+                var this_ = this;
+                mapboxgl.accessToken = 'pk.eyJ1Ijoiam5leCIsImEiOiJjamw0a3UyejkwNTl5M3Bqb29oa3AxeTNyIn0.TkW5lUoMnYJW2xJoVGNk3g';
+                // var basemapUrl = 'http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaBlack/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
+                // var basemapUrl = 'http://140.27.73.190/arcgis/rest/services/ChinaGrayNew/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
+                var basemapUrl = 'http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaBeige/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
+                // var basemapUrl = "http://lbsapi.cindata.cn/gis/v1/services/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90&mapCode=1_base_map_fe9e51abd96b7a041ab6f883eda91349&keyCode=c99d19fff3334f6480688205e1db9456";
+                var style = {
+                    version: 8,
+                    glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+                    sources: {
+                        "ChinaGray": {
+                            "type": "raster",
+                            "tiles": [basemapUrl],
+                            "tileSize": 256
+                        },
+                    },
+                    layers: [{
+                        "id": "baseMap",
+                        "type": "raster",
+                        "source": "ChinaGray"
+                    }]
+                };
+                this.map = new mapboxgl.Map({
+                    container: 'map',
+                    style: style,
+                    minZoom: 0,
+                    maxZoom: 24,
+                    bearing: 0,
+                    pitch: 0,
+                    zoom: 8,
+                    center: [120.1780026,36.24577038],
+                    preserveDrawingBuffer: true
+                });
+                // this.map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+                this.map.on('load', function () {
+                    this_.addLayer_streetoffice();
+                    this_.addLayer();
+                    setTimeout(this_.startFly(),2000);
+                });
+            },
+            addLayer: function () {
+                this.map.addLayer({
+                    id: 'contour',
+                    type: 'line',
+                    source: {
+                        type: 'geojson',
+                        data: contourLine
+                    },
+                    paint: {
+                        'line-width': 1,
+                        // 'line-color': '#ff0000',
+                        'line-color':{
+                            type: 'interval',
+                            property: "Contour",
+                            stops: [
+                                [0,'#051499'],
+                                [5000,'#032BA8'],
+                                [6000,'#0247B9'],
+                                [7000,"#0065CD"],
+                                [8000,'#007CE2'],
+                                [9000,'#008DF2'],
+                                [10000,'#019CFF'],
+                                [11000,'#38B2FF'],
+                                [12000,'#71C8FF'],
+                                [14000,'#91D4FF'],
+                                [16000,'#C4E8FE'],
+                                [18000,'#DEEEE8'],
+                                [20000,'#F8F4D4'],
+                                [22000,'#FFE6B7'],
+                                [24000,'#FFCD93'],
+                                [26000,'#FFB46E'],
+                                [30000,'#FF964C'],
+                                [40000,'#FF7527'],
+                                [50000,'#FD4E00'],
+                                [70000,'#E70C00'],
+                            ],
+                            default: 'gray'
+                        }
+                    },
+                    minzoom: 0,
+                    maxzoom: 24,
+                });
+            },
+            addLayer_streetoffice:function(){
+                this.map.addLayer({
+                    id: 'gr_streetoffice_qingdao',
+                    type: 'fill',
+                    // source: {
+                    //     "type": "vector",
+                    //     'scheme': 'tms',
+                    //     'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/cim:gr_streetoffice_qingdao@EPSG:900913@pbf/{z}/{x}/{y}.pbf"]
+                    // },
+                    // "source-layer": "gr_streetoffice_qingdao",
+                    source: {
+                        type: 'geojson',
+                        data: streetPolygon
+                    },
+                    filter: ['all', false],
+                    paint: {
+                        'fill-opacity': 0.8, //不透明度 `0 ~ 1.0`
+                        'fill-color':'red',
+                        'fill-outline-color': 'white', //轮廓线颜色
+                    },
+                    minzoom: 0,
+                    maxzoom: 24,
+                });
+            },
+            startFly: function () {
+                var this_ = this;
+                setInterval(function(){
+                    this_.width = 200;
+                    this_.opacity = 1;
+
+                    this_.areaName = this_.areaConf[this_.area[this_.currentIndex]].name;
+                    this_.avg_price = this_.areaConf[this_.area[this_.currentIndex]].avg_price;
+                    this_.streetMax = this_.areaPriceConf[this_.area[this_.currentIndex]][1];
+                    this_.streetMin = this_.areaPriceConf[this_.area[this_.currentIndex]][0];
+
+                    this_.transform = this_.areaConf[this_.area[this_.currentIndex]].transform;
+                    this_.map.flyTo(this_.areaConf[this_.area[this_.currentIndex]].fly);
+                    this_.map.setFilter('contour', ['all', ['==','area',this_.area[this_.currentIndex]]]);
+                    this_.map.setFilter('gr_streetoffice_qingdao', ['any', ['==','area_id',this_.streetMax.area_id], ['==','area_id',this_.streetMin.area_id]]);
+                    this_.map.setPaintProperty('gr_streetoffice_qingdao', 'fill-color',{
+                            type: 'categorical',
+                            property: "area_id",
+                            stops: [[this_.streetMin.area_id,'#051499'],[this_.streetMax.area_id,'#E70C00']],
+                            default: 'gray'
+                    });
+                    this_.currentIndex = this_.currentIndex==this_.area.length-1? 0 : this_.currentIndex+1;
+                    setTimeout(function(){
+                        this_.width = 0
+                        this_.opacity = 0;
+                    },5000);
+                },6000);
+            }
+        }
+    });
+</script>
+</body>
+</html>

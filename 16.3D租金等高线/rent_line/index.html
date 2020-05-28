@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link>
+<title>租金等高线</title>
+<meta name="description" content="租金等高线">
+<link rel="shortcut icon" href="http://gisapi.cindata.cn/icon/favicon.ico" />
+<link rel="bookmark" href="http://gisapi.cindata.cn/icon/favicon.ico" />
+<link rel="stylesheet"  href="http://gisapi.cindata.cn/project/citySelect/common.css">
+<link rel="stylesheet" href="http://gisapi.cindata.cn/arcgis_js_api/4.9/esri/css/main.css">
+<script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+<script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.mockjax.js"></script>
+<script src="http://gisapi.cindata.cn/jQuery-Autocomplete/jquery.autocomplete.js"></script>
+<script src="http://gisapi.cindata.cn/jQuery-Autocomplete/countries.js"></script>
+<script type="text/javascript" src="http://gisapi.cindata.cn/project/citySelect/citySelect.js" ></script>
+<link rel="stylesheet" href="http://gisapi.cindata.cn/layui/v2.4.3/css/layui.css">
+<script src="http://gisapi.cindata.cn/layui/v2.4.3/layui.js"></script>
+<style type="text/css">
+    #rentListDiv{
+        z-index: 9;
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        width: 280px;
+        background-color: white;
+        user-select:none;
+        box-shadow: 0 4px 4px rgba(0,0,0,.15);
+    }
+    #rentList-title{
+        height:40px;
+        line-height:40px;
+        padding-left:16px;
+        font-size:14px;
+        font-weight:bold;
+        font-family:MicrosoftYaHei-Bold;
+        color: white;
+        background: #008aff;
+        position: relative;
+        cursor: pointer;
+    }
+    #rentList-content{
+        border-radius: 0px 0px 2px 2px;
+        font-family:MicrosoftYaHei-Bold;
+        position: relative;
+        overflow-y: overlay;
+        max-height: 400px;
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
+    #rentList-content::-webkit-scrollbar {
+        width: 3px;
+    }
+    #progressListDiv{
+        width: 70px;
+        margin-left: 95px;
+        margin-top: 10px;
+        padding-top: 10px;
+    }
+    .layui-progress{
+        height: 8px;
+    }
+    .layui-progress-bar{
+        height: 8px;
+    }
+    .layui-progress{
+        margin-bottom: 18px;
+    }
+    #nameListDiv{
+        width: 70px;
+        font-size: 12px;
+        color: #6D6D6D;
+        position: absolute;
+        font-family:Helvetica Neue,Helvetica,PingFang SC,Tahoma,Arial,sans-serif;
+        top: 11px;
+        letter-spacing: 0.8px;
+        left: 20px;
+    }
+    #nameListDiv li{
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        height: 26px;
+        line-height: 26px;
+    }
+    #rentPriceListDiv{
+        width: 80px;
+        font-size: 12px;
+        position: absolute;
+        font-family:MicrosoftYaHei-Bold;
+        top: 11px;
+        letter-spacing: 0.6px;
+        right: 20px;
+        text-align: right;
+    }
+    #rentPriceListDiv li{
+        height: 26px;
+        line-height: 26px;
+        color: red;
+        font-weight: bold;
+    }
+    #rentPriceListDiv li span{
+        letter-spacing: 0.1px;   
+        color: #999;
+        font-weight: 100;
+    }
+    #rentList-toolbar{
+        line-height: 36px;
+        height: 36px;
+        /* border-bottom: 1px solid #ece6e6; */
+        cursor: pointer;
+        /* border-top: 1px solid; */
+        /* margin: 0px auto; */
+        width: 200px;
+        margin-top: 10px;
+        margin-left: 20px;
+    }
+    #rentList-toolbar div{
+        display: table-cell;
+        width: 80px;
+        text-align: center;
+        font-size: 14px;
+        /* background-color: rgba(245,245,245,1); */
+        /* border-bottom:1px solid #e2e2e2; */
+    }
+    #rentList-toolbar div:last-child.select{
+        /* border-left:1px solid #e2e2e2; */
+        border-bottom: 2px solid;
+        background-color: white;
+        cursor: default;
+        color: #008aff;
+    }
+    #rentList-toolbar div:first-child.select{
+        border-bottom: 2px solid;
+        background-color: white;
+        cursor: default;
+        color: #008aff;
+    }
+    .popuid2{
+        position:absolute;
+        height:28px;
+        line-height:28px;
+        text-align:center;
+        box-shadow:0 2px 2px rgba(0,0,0,.15);
+        background-color: white;
+        border-radius: 2px;
+        z-index: 100;
+    }
+</style>
+</head>
+
+<body>
+    <div id="citySelect-show" class="suspended-frame">
+        <span>哈尔滨市</span>
+        <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+    </div>
+
+    <div id="citySelectDiv" style="display:none;" class="suspended-frame">
+        <div id="citySelect-title">当前城市：哈尔滨市</div>
+        <div id="citySelect-content">
+            <ul id="citySelect-popular">
+                <li name="北京市">北京市</li>
+                <li name="沈阳市">沈阳市</li>
+                <li name="哈尔滨市">哈尔滨市</li>
+                <li name="上海市">上海市</li>
+                <li name="杭州市">杭州市</li>
+                <li name="青岛市">青岛市</li>
+                <li name="武汉市">武汉市</li>
+                <li name="广州市">广州市</li>
+                <li name="深圳市">深圳市</li>
+                <li name="重庆市">重庆市</li>
+                <li name="成都市">成都市</li>
+            </ul>
+            <div id="citySelect-toolbar">
+                <div id="citySelect-province" class="citySelect-btn">按省份</div>
+                <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+                <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+                <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+                </ul>
+                <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+                </ul>
+            </div>
+            <div id="citySelect-list">
+                <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+                </dl>
+                <dl id="citySelect-city-list" class="citySelect-list">
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div id="rentListDiv">
+        <div id="rentList-title">
+            租金排行榜
+            <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"
+              style="vertical-align: inherit;position: absolute;right: 20px;top:15px;"/>
+        </div>
+        <div id="rentList-toolbar">
+            <!-- <div class="select" name="plate">板块</div> -->
+            <div class="select" name="comm">小区</div>
+        </div>
+        <div id="rentList-content">
+            <div id="progressListDiv">
+            </div>
+            <ul id="nameListDiv">
+            </ul>
+            <ul id="rentPriceListDiv">
+            </ul>
+        </div>
+    </div>
+
+    <div id="div_main_top" style="width: 100%; float: left; border-left: solid 0px #388E8E;position:readonly">
+    <div id="div_main" style="width: 100%; float: left; border-left: solid 0px #388E8E;position:readonly">
+        <div id="gxdMap">
+        </div>
+    </div>
+    <div style="display:none;" id="template-div">
+        <div class="label-tail">
+            <img src="images/tail.png"
+                 style="width:16px;height:10px;position:absolute;">
+        </div>
+    </div> 
+</body>
+<script src="http://gisapi.cindata.cn/arcgis_js_api/4.9/init.js"></script>
+<script type="text/javascript" src="index.js"></script>
+<script>
+var cityIds = [2301,1101,3101,4401,4403,2305,4101,4406];
+var cityCode = "2301";
+var lineId = "0";
+var serverUrl = "http://gissvc4an.cindata.cn/arcgis/rest/services/special_map/CONTOUR_RENT_XXXX/MapServer/0";
+$('#div_main').width($(window).width());
+$('#div_main').height($(window).height());
+$('#gxdMap').width($(window).width());
+$('#gxdMap').height($(window).height());
+var _ctx = '${ctx!}';
+var esri = {};
+var rentType = "comm";
+require(["esri/Map",
+    "esri/Basemap",
+    "esri/views/MapView",
+    "esri/Graphic",
+    "esri/layers/WebTileLayer",
+    "esri/layers/GraphicsLayer",
+    "esri/widgets/Sketch/SketchViewModel",
+    "esri/geometry/Extent",
+    "esri/geometry/Point",
+    "esri/geometry/Circle",
+    "esri/geometry/Polygon",
+    "esri/geometry/Geometry",
+    "esri/layers/support/TileInfo",
+    "esri/core/watchUtils",
+    "esri/layers/FeatureLayer"
+], function(Map, Basemap, MapView, Graphic, WebTileLayer,
+    GraphicsLayer, SketchViewModel, Extent, Point, Circle,
+    Polygon, Geometry, TileInfo, WatchUtils,FeatureLayer) {
+    esri.Map = Map;
+    esri.Basemap = Basemap;
+    esri.views = {};
+    esri.views.MapView = MapView;
+    esri.views.SketchViewModel = SketchViewModel;
+    esri.Graphic = Graphic;
+    esri.layers = {};
+    esri.layers.WebTileLayer = WebTileLayer;
+    esri.layers.GraphicsLayer = GraphicsLayer;
+    esri.layers.support = {};
+    esri.layers.support.TileInfo = TileInfo;
+    esri.geometry = {};
+    esri.geometry.Extent = Extent;
+    esri.geometry.Point = Point;
+    esri.geometry.Circle = Circle;
+    esri.geometry.Polygon = Polygon;
+    esri.geometry.Geometry = Geometry;
+    esri.geometry.support = {};
+    esri.core = {};
+    esri.core.WatchUtils = WatchUtils;
+    esri.extend = {};
+    esri.layers.FeatureLayer = FeatureLayer;
+    init();
+    
+});
+var element;
+layui.use('element', function(){
+    element = layui.element;
+    loadRentTop();
+});
+</script>
+</html>
