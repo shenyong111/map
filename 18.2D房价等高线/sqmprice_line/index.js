@@ -7,8 +7,8 @@ var showLayer = null;
 var oldGraphic = null;
 function init() {
 
-    symbol = {type: "simple-fill",color: [0,169,41,0],outline: {color: [255,252,0],width: 3}};
-    oldSymbol = {type: "simple-fill",color: [0,169,41,0],outline: {color: [0, 190, 76,0],width: 3}};
+    symbol = {type: "simple-line",color: [0,169,41,0],outline: {color: [255,252,0],width: 3}};
+    oldSymbol = {type: "simple-line",color: [0,169,41,0],outline: {color: [0, 190, 76,0],width: 3}};
     
     var webTileLayer = new esri.layers.WebTileLayer({
         urlTemplate: "http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaBlack/MapServer/tile/{level}/{row}/{col}",
@@ -131,13 +131,11 @@ function clearShowGraphic(layer,time){
 function pointerMove(response){
     try{
         var graphic = response.results.filter(function (result) {
-            return (result.graphic.attributes&&result.graphic.attributes.mark);
+            return (result.graphic.attributes);
         })[0].graphic;
         showLabel(graphic,response.screenPoint);
     }catch(e){
-        if(oldGraphic){
-            oldGraphic.symbol = oldSymbol;
-        }
+        showLayer.removeAll();
         $(".popuid").remove();
     }
 }
@@ -145,29 +143,25 @@ function pointerMove(response){
 function showLabel(graphic,screenPoint) {
     var $popuid = $(".popuid");
     if($popuid.length>0){
-        if($popuid.attr("addressId")==graphic.attributes.addressId){
+        if($popuid.attr("addressId")==graphic.attributes.OBJECTID){
             return;
         }
     }
-    if(oldGraphic){
-        oldGraphic.symbol = oldSymbol;
-    }
+    showLayer.removeAll();
     $(".popuid").remove();
-    oldGraphic = graphic;
-    graphic.symbol = symbol;
+    var graphic = new esri.Graphic({ geometry: graphic.geometry, symbol: symbol, attributes: graphic.attributes });
+    showLayer.add(graphic);
     var $label = $(".label-tail").clone();
-    var label = graphic.attributes.name;
-    var picMLength = calcStringPixelsCount("板块："+label,"14px")+40;
-    picMLength = Math.max(picMLength,calcStringPixelsCount("价格："+graphic.attributes.precinct_price+"元/㎡","14px")+40);
+    var picMLength = calcStringPixelsCount("房价："+graphic.attributes.Contour+"元/㎡","14px")+40;
     var MonDiv=document.createElement("div");
     MonDiv.setAttribute('class',"popuid");
-    MonDiv.setAttribute('addressId',graphic.attributes.addressId);
-    MonDiv.style.left=screenPoint.x-(picMLength/2)+"px";
-    MonDiv.style.top=screenPoint.y-70+"px";
+    MonDiv.setAttribute('addressId',graphic.attributes.OBJECTID);
+    MonDiv.style.left=screenPoint.x-(picMLength/2)-8+"px";
+    MonDiv.style.top=screenPoint.y-40+"px";
     dojo.style(MonDiv, "width", picMLength+"px");
     MonDiv.style.zIndex = 100;
     $label.css("left",(picMLength/2)-8);
-    MonDiv.innerHTML="<span class='label'>板块："+label+"</span></br><span class='label'>价格：<label style='color:red;'>"+graphic.attributes.precinct_price+"</label>元/㎡</span>"+$label.prop("outerHTML");
+    MonDiv.innerHTML="<span class='label'>房价：<label style='color:red;'>"+graphic.attributes.Contour+"</label>元/㎡</span>"+$label.prop("outerHTML");
     $("#div_main_top").append(MonDiv);
 }
 
