@@ -1,13 +1,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <script src="js/d3js/d3.v5.min.js" charset="utf-8"></script>
     <link href="css/c3.css" rel="stylesheet" type="text/css">
-    <script src="js/c3.min.js"></script>
-    <script src="js/jquery/jquery-2.1.1.js"></script>
-    <script src="js/vue/vue.js"></script>
-    <link href='js/mapbox/mapbox-gl.css' rel='stylesheet' />
-    <script src='js/mapbox/mapbox-gl.js'></script>
 </head>
 <body>
     <div id='app' style="">
@@ -15,25 +9,73 @@
         <div id='map'></div>
         <div id="dataPanel">
             <div id="chart"></div>
-            <div id="yearButtons">
-                <button v-for="(item,index) in periodYear"
-                        @click="periodYearClick(item)"
-                        :class="item.isActived? 'actived' :''"
-                        :style="{'background-color':item.isActived?colors[index]:''}">
-                    <div style="float:left;padding-left: 50%;margin-left: -55px;">{{ item.startYear + ' - ' + item.endYear }}</div>
-                    <div style="float:right;margin-top:2px;height:18px;width: 55px;line-height: 18px;background:rgba(255,255,255,1);border-radius:12px;font-weight:500;color:rgba(102,02,102,1);text-align: left;">
-                        <div :style="{'background-color':item.isActived?colors[index]:'rgba(102,102,102,1)'}" style="float:left;margin-top: 6px;margin-left: 8px;margin-right:6px;width:6px;height:6px;border-radius:6px;"></div>
-                        {{item.totle + '|' + item.totleHouse}}
-                    </div>
-                </button>
+            <template>
+                <div id="yearButtons">
+                    <button v-for="(item,index) in periodYear"
+                            @click="periodYearClick(item)"
+                            :class="item.isActived? 'actived' :''"
+                            :style="{'background-color':item.isActived?colors[index]:''}">
+                        <div style="float:left;padding-left: 50%;margin-left: -100px;">{{ item.startYear + ' - ' + item.endYear }}</div>
+                        <div style="float:right;margin-top:2px;height:18px;width: 130px;line-height: 18px;background:rgba(255,255,255,1);border-radius:12px;font-weight:500;color:rgba(102,02,102,1);text-align: left;">
+                            <div :style="{'background-color':item.isActived?colors[index]:'rgba(102,102,102,1)'}" style="float:left;margin-top: 6px;margin-left: 8px;margin-right:6px;width:6px;height:6px;border-radius:6px;"></div>
+                            {{item.totle+'【'+item.totleHouse+'】'}}
+                        </div>
+                    </button>
+                </div>
+                <div id="controlButtons">
+                    <img @click="playClick" :src="playStatus?'data/pause.png':'data/play.png'" />
+                    <label @click="curYearClick">{{ curYear + '年：'+curCity+'建成小区'+ (allData[curYear-startYear+1]>0?allData[curYear-startYear+1]:'？')+'个' }}</label>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div id="citySelect-show" class="suspended-frame">
+        <span>北京市</span>
+        <img src="http://gisapi.cindata.cn/project/citySelect/images/more.png"  alt="选择城市"  style="vertical-align: inherit;margin-left: 5px;"/>
+    </div>
+    <div id="citySelectDiv" style="display:none;" class="suspended-frame">
+        <div id="citySelect-title">当前城市：北京市</div>
+        <div id="citySelect-content">
+            <ul id="citySelect-popular">
+                <li name="北京市">北京市</li>
+                <li name="沈阳市">沈阳市</li>
+                <li name="哈尔滨市">哈尔滨市</li>
+                <li name="上海市">上海市</li>
+                <li name="杭州市">杭州市</li>
+                <li name="青岛市">青岛市</li>
+                <li name="武汉市">武汉市</li>
+                <li name="广州市">广州市</li>
+                <li name="深圳市">深圳市</li>
+                <li name="重庆市">重庆市</li>
+                <li name="成都市">成都市</li>
+            </ul>
+            <div id="citySelect-toolbar">
+                <div id="citySelect-province" class="citySelect-btn">按省份</div>
+                <div id="citySelect-city" class="citySelect-btn select">按城市</div>
+                <input id="citySelect-search-input" type="text" placeholder="输入城市名" value="">
+                <ul id="citySelect-alphabetic-province" class="citySelect-alphabetic" style="display:none">
+                </ul>
+                <ul id="citySelect-alphabetic-city" class="citySelect-alphabetic">
+                </ul>
             </div>
-            <div id="controlButtons">
-                <img @click="playClick" :src="playStatus?'data/pause.png':'data/play.png'" />
-                <label @click="curYearClick">{{ curYear + '年：'+curCity+'建成小区'+ (allData[curYear-startYear+1]>0?allData[curYear-startYear+1]:'0')+'个' }}</label>
+            <div id="citySelect-list">
+                <dl id="citySelect-province-list" class="citySelect-list" style="display:none">
+                </dl>
+                <dl id="citySelect-city-list" class="citySelect-list">
+                </dl>
             </div>
         </div>
     </div>
-<script src="data/communityPoint.js"></script>
+
+<script src="https://d3js.org/d3.v5.min.js" charset="utf-8"></script>
+<script src="js/c3.min.js"></script>
+<script src="http://gisapi.cindata.cn/jquery/jquery-2.1.1.js"></script>
+<script src="https://unpkg.com/vue/dist/vue.js"></script>
+<link rel='stylesheet' href='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.css'/>
+<script src='http://gisapi.cindata.cn/mapbox-gl/v0.47.0/mapbox-gl.js'></script>
+<link rel="stylesheet" href="js/citySelect/citySelect/common.css">
+<script type="text/javascript" src="js/citySelect/citySelect/citySelect.js"></script>
 <style>
     html, body {
         margin: 0px;
@@ -106,7 +148,7 @@
         /*text-align: right;*/
     }
     #yearButtons button{
-        width:calc((100% - 75px)/4);
+        width:calc((100% - 91px)/7);
         background-color: rgba(102,102,102,1);
         color: whitesmoke;
         margin-right: 5px;
@@ -138,7 +180,10 @@
             playStatus:false,
             myAuto:document.getElementById('myAuto'),
             temptData:[
-                '小区个数',
+                '小区个数【套数】',
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
@@ -150,6 +195,19 @@
                 0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+            ],
+            allDataHouse:[
+                '房屋套数',
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
             ],
             curData:[
                 '小区个数',
@@ -157,21 +215,45 @@
                 0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,0,0,
             ],
-            cityId:1499,
-            curCity:'青岛',
-            startYear: 1980,
+            cityId:2,
+            curCity:'北京',
+            startYear: 1950,
             endYear: 2019,
-            curYear : 1980,
+            curYear : 1950,
             gap:10,
-            // colors: ['#5000EB','#0063E7','#119EF3','#0BC9C9','#19A350','#DD9F00','#E4290F'],
-            colors: ['#5000EB','#119EF3','#19A350','#E4290F'],
+            // colors: ['#005DD9','#30A8F0','#00F6F6','#31AD61','#FFB900','#FF4229','#FF00FF'],
+            colors: ['#5000EB','#0063E7','#119EF3','#0BC9C9','#19A350','#DD9F00','#E4290F'],
             stops:[],
             isChartOpen: true,
             chart: null,
             intervalId: null,
             intervalGap: 500,
             periodYear:[
+                {
+                    startYear: 1950,
+                    endYear: 1959,
+                    isActived: true,
+                    totle: 0,
+                    totleHouse: 0
+                },
+                {
+                    startYear: 1960,
+                    endYear: 1969,
+                    isActived: true,
+                    totle:0,
+                    totleHouse: 0
+                },
+                {
+                    startYear: 1970,
+                    endYear: 1979,
+                    isActived: true,
+                    totle:0,
+                    totleHouse: 0
+                },
                 {
                     startYear: 1980,
                     endYear: 1989,
@@ -249,6 +331,15 @@
                 right: 30,
                 left: 30,
             },
+            tooltip: {
+                format: {
+                    // title: function (x,index) { return x+'' + index; },
+                    value: function (value, ratio, id, index) {
+                        var totleHouse = app.allDataHouse[index+1]
+                        return value + '【' + totleHouse + '】';
+                    }
+                }
+            },
             data: {
                 // x:'x',
                 type: 'bar',
@@ -277,6 +368,9 @@
                     // label: '建成年份（1950-2019）',
                     type: 'category',
                     categories:  [
+                        '1950年','1951年','1952年','1953年','1954年','1955年','1956年','1957年','1958年','1959年',
+                        '1960年','1961年','1962年','1963年','1964年','1965年','1966年','1967年','1968年','1969年',
+                        '1970年','1971年','1972年','1973年','1974年','1975年','1976年','1977年','1978年','1979年',
                         '1980年','1981年','1982年','1983年','1984年','1985年','1986年','1987年','1988年','1989年',
                         '1990年','1991年','1992年','1993年','1994年','1995年','1996年','1997年','1998年','1999年',
                         '2000年','2001年','2002年','2003年','2004年','2005年','2006年','2007年','2008年','2009年',
@@ -377,32 +471,28 @@
             app.periodYear[i].totle = 0;
             for(var j = app.periodYear[i].startYear; j<= app.periodYear[i].endYear;j++){
                 app.periodYear[i].totle += app.allData[j-app.startYear+1];
+                app.periodYear[i].totleHouse += app.allDataHouse[j-app.startYear+1];
             }
         }
     };
     function initAllData(startYear,endYear){
-        var buildyear;
-        for(var i=0;i<communityPoint.features.length;i++){
-            buildyear = communityPoint.features[i].properties.buildyear;
-            if(buildyear>=startYear && buildyear<=endYear ){
-                app.allData[buildyear-app.startYear+1]++;
-                app.curData[buildyear-app.startYear+1]++;
+        getCityFeaturesByCityidOnWfs(app.cityId,startYear-1,endYear+1,function(geojson){
+            if(geojson.totalFeatures >= 10000){
+                var midYear = Math.floor((startYear+endYear)/2);
+                initAllData(startYear,midYear);
+                initAllData(midYear+1,endYear);
+            }else{
+                var buildyear, totalhouseholdcount;
+                for(var i=0;i<geojson.features.length;i++){
+                    buildyear = geojson.features[i].properties.buildyear;
+                    totalhouseholdcount = geojson.features[i].properties.totalhouseholdcount;
+                    totalhouseholdcount = totalhouseholdcount?totalhouseholdcount:0;
+                    app.allData[buildyear-app.startYear+1]++;
+                    app.curData[buildyear-app.startYear+1]++;
+                    app.allDataHouse[buildyear-app.startYear+1] += totalhouseholdcount;
+                };
             }
-        };
-        // getCityFeaturesByCityidOnWfs(app.cityId,startYear-1,endYear+1,function(geojson){
-        //     if(geojson.totalFeatures >= 10000){
-        //         var midYear = Math.floor((startYear+endYear)/2);
-        //         initAllData(startYear,midYear);
-        //         initAllData(midYear+1,endYear);
-        //     }else{
-        //         var buildyear;
-        //         for(var i=0;i<geojson.features.length;i++){
-        //             buildyear = geojson.features[i].properties.buildyear;
-        //             app.allData[buildyear-app.startYear+1]++;
-        //             app.curData[buildyear-app.startYear+1]++;
-        //         };
-        //     }
-        // });
+        });
     }
 
     function initStops(){
@@ -414,7 +504,6 @@
     function initMap(){
         mapboxgl.accessToken = 'pk.eyJ1Ijoiam5leCIsImEiOiJjamw0a3UyejkwNTl5M3Bqb29oa3AxeTNyIn0.TkW5lUoMnYJW2xJoVGNk3g';
         var basemapUrl = 'http://gissvc4an.cindata.cn/arcgis/rest/services/comm/ChinaBlack/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
-        // var basemapUrl = 'http://140.27.73.190/arcgis/rest/services/ChinaGrayNew/MapServer/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90';
         // var basemapUrl = "http://lbsapi.cindata.cn/gis/v1/services/export?F=image&FORMAT=PNG32&TRANSPARENT=true&SIZE=256%2C256&BBOX={bbox-epsg-3857}&BBOXSR=3857&IMAGESR=3857&DPI=90&mapCode=1_base_map_fe9e51abd96b7a041ab6f883eda91349&keyCode=c99d19fff3334f6480688205e1db9456";
         var style = {
             version: 8,
@@ -440,7 +529,7 @@
             bearing: 0,
             pitch: 0,
             zoom: 9,
-            center: [120.3780026,36.06577038],
+            center: [116.43199130100004, 39.94557711600004],
             preserveDrawingBuffer: true
         });
         map.addControl(new mapboxgl.NavigationControl(), 'top-left');
@@ -456,16 +545,12 @@
         map.addLayer({
             id: 'community',
             type: 'circle',
-            // source: {
-            //     "type": "vector",
-            //     'scheme': 'tms',
-            //     'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/gxd:gp_community@EPSG:900913@pbf/{z}/{x}/{y}.pbf"]
-            // },
-            // "source-layer": "gp_community",
             source: {
-                type: 'geojson',
-                data: communityPoint
+                "type": "vector",
+                'scheme': 'tms',
+                'tiles': ["http://geoserver.cindata.cn/geoserver/gwc/service/tms/1.0.0/gxd:gp_community@EPSG:900913@pbf/{z}/{x}/{y}.pbf"]
             },
+            "source-layer": "gp_community",
             filter: ['all', ['==','city_id',app.cityId],['>=','buildyear',app.startYear]],
             paint: {
                 'circle-radius': 3, //半径
@@ -491,7 +576,7 @@
             minzoom: 0,
             maxzoom: 24,
         });
-        addPopup('community', ['label','buildyear'], ['小区名称','建成年份'])
+        addPopup('community', ['label','buildyear','totalhouseholdcount'], ['小区名称','建成年份','套数'])
     }
     //气泡
     var popup = new mapboxgl.Popup({
@@ -562,7 +647,7 @@
                 typeName:"gp_community",
                 maxFeatures:"10000",
                 outputFormat:"application/json",
-                propertyName:"city_id,buildyear",
+                propertyName:"city_id,buildyear,totalhouseholdcount",
                 filter:"<Filter><And>" +
                     "<PropertyIsEqualTo> <PropertyName>city_id</PropertyName> <Literal>"+cityid+"</Literal> </PropertyIsEqualTo> " +
                     // "<PropertyIsEqualTo> <PropertyName>buildyear</PropertyName> <Literal>"+app.curYear+"</Literal> </PropertyIsEqualTo> " +
@@ -579,7 +664,7 @@
             area: null,
             cityId: 2,
             swicthCity: function (area) {
-                this.area = {};
+                this.area = area;
                 this.cityId = area.areaId;
                 app.curCity = area.name;
                 app.cityId = area.areaId;
